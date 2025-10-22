@@ -1,0 +1,33 @@
+#!/bin/zsh
+
+#################################################################
+# Commands
+
+# Initialize zsh completion system
+# ref: zsh.sourceforge.io/Doc/Release/Completion-System.html
+autoload -U compinstall
+autoload -U compinit
+compinit
+
+# init homebrew shell env vars, etc
+if command -v /opt/homebrew/bin/brew > /dev/null; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+fi
+
+# mise automatic activation: hook mise into shell prompt and automatically 
+# update your environment when you change directories
+# ref: https://mise.jdx.dev/dev-tools/#environment-integration
+if command -v mise > /dev/null; then
+    eval "$(mise activate zsh)"
+fi
+
+# oh-my-posh prompt theme
+if command -v brew > /dev/null && command -v oh-my-posh > /dev/null; then
+    config="$(brew --prefix oh-my-posh)/themes/marcduiker.omp.json"
+    [ -f "$config" ] && eval "$(oh-my-posh init zsh --config "$config")"
+fi
+
+# go-task/task shell completions
+if command -v task > /dev/null; then
+    eval "$(task --completion zsh)"
+fi
