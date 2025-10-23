@@ -1,0 +1,74 @@
+version: '3'
+
+vars:
+  CHEZMOI: '{{.CHEZMOI | default "/opt/homebrew/bin/chezmoi"}}'
+
+tasks:
+  default:
+    aliases: [chezmoi]
+    cmds:
+      - '{{.CHEZMOI}} {{.CMD}} {{.EXTRA}}'
+    requires:
+      vars: [CMD, EXTRA]
+    preconditions:
+      - sh: command -v {{.CHEZMOI}}
+        msg: chezmoi not found
+
+  apply:
+    - task: default
+      vars: { CMD: apply, EXTRA: '{{.EXTRA}}' }
+
+  diff:
+    - task: default
+      vars: { CMD: diff, EXTRA: '{{.EXTRA}}' }
+
+  git:pull:
+    - task: default
+      vars: { CMD: git pull, EXTRA: -- --autostash --rebase }
+
+  init:
+    desc: Initialize chezmoi.
+    summary: |
+      Initialize chezmoi.
+
+      Creates chezmoi src dir and git repo, if none provided.
+
+      USAGE
+      
+      chezmoi init [repo] [flags]
+
+      DESCRIPTION
+
+      Setup the source directory, generate the config file, and optionally 
+      update the destination directory to match the target state. This is 
+      done in the following order:
+
+      1. The source directory is initialized. If chezmoi does not detect a 
+      Git repository in the source directory, chezmoi will clone the 
+      provided repo into the source directory. If no repo is provided, 
+      chezmoi will initialize a new Git repository.
+      
+      2. If the initialized source directory contains a 
+      .chezmoi.$FORMAT.tmpl file, a new configuration file will be created 
+      using that file as a template.
+
+      ...
+
+    cmds:
+      - task: default
+        vars:
+          CMD: init
+          EXTRA: '{{.REPO}} {{.FLAGS}}'
+    generates:
+      - '{{.XDG_DATA_HOME}}/chezmoi'
+      - '{{.XDG_DATA_HOME}}/chezmoi/.git'
+    status:
+      - test -d {{.XDG_DATA_HOME}}/chezmoi/.git
+    requires:
+      vars: [XDG_DATA_HOME]
+
+  update:
+    cmds:
+      - task: default
+        vars:
+          CMD: update

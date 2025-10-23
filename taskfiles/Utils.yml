@@ -1,0 +1,64 @@
+version: '3'
+
+includes:
+  chezmoi:  { taskfile: ./Chezmoi.yml }
+  git:      { taskfile: ./Git.yml }
+
+tasks:
+  apply:
+    desc: Apply from source
+    deps: [chezmoi:diff]
+    prompt: Apply changes?
+    cmds:
+      - task: chezmoi:apply
+
+  checkout:
+    desc: Checkout dotfiles repo
+    cmds:
+      - task: chezmoi:init
+        vars: { REPO: '{{.REPO}}' }
+    requires:
+      vars: [REPO]
+
+  sync:
+    prompt: Update source repo?
+    cmds:
+      - task: git-add-dryrun
+        vars: { PATHSPEC: '{{.PATHSPEC}}' }
+      - task: git-commit-dryrun
+        vars: { MSG: '{{.MSG}}' }
+      - task: git:pull
+      - task: git-push-dryrun
+        vars: { REPO: '{{.REPO}}' }
+    requires:
+      vars: [MSG, PATHSPEC, REPO]
+
+  git-add-dryrun:
+    aliases: [git-add]
+    prompt: Add file contents to the index?
+    deps:
+      - task: git:add
+        vars: { OPTS: -nv, PATHSPEC: '{{.PATHSPEC}}' }
+    cmds:
+      - task: git:add
+        vars: { PATHSPEC: '{{.PATHSPEC}}' }
+
+  git-commit-dryrun:
+    aliases: [git-commit]
+    prompt: Record changes to the repository?
+    deps:
+      - task: git:commit
+        vars: { MSG: '{{.MSG}}', OPTS: --dry-run }
+    cmds:
+      - task: git:commit
+        vars: { MSG: '{{.MSG}}' }
+
+  git-push-dryrun:
+    aliases: [git-push]
+    prompt: Update remote refs?
+    deps:
+      - task: git:push
+        vars: { OPTS: -nv, REPO: '{{.REPO}}' }
+    cmds:
+      - task: git:push
+        vars: { REPO: '{{.REPO}}' }

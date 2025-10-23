@@ -1,0 +1,45 @@
+version: '3'
+
+vars:
+  GIT: '{{.GIT | default "/usr/bin/git"}}'
+
+tasks:
+  default:
+    aliases: [git]
+    cmds:
+      - '{{.GIT}} {{.CMD}} {{.EXTRA}}'
+    requires:
+      vars: [CMD]
+    preconditions:
+      - sh: command -v {{.GIT}}
+        msg: git not found
+
+  add:
+    desc: Add file contents to the index.
+    cmds:
+      - task: default
+        vars: { CMD: add, EXTRA: '{{.OPTS}} "{{.PATHSPEC}}"' }
+    requires:
+      vars: [PATHSPEC]
+
+  commit:
+    desc: Record changes to the repository.
+    cmds:
+      - task: default
+        vars: { CMD: commit, EXTRA: '{{.OPTS}} -m "{{.MSG}}"' }
+    requires:
+      vars: [MSG]
+
+  pull:
+    desc: Fetch from and integrate with another repository or a local branch.
+    cmds:
+      - task: default
+        vars: { CMD: pull }
+
+  push:
+    desc: Update remote refs along with associated objects.
+    cmds:
+      - task: default
+        vars: { CMD: push, EXTRA: '{{.OPTS}} {{.REPO}}' }
+    requires:
+      vars: [REPO]

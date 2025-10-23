@@ -18,6 +18,7 @@ export XDG_STATE_HOME="$HOME/.local/state"              # user state data (logs,
 # Update PATH
 # VS code says this should be in ~/.zprofile
 VSCODE_CLI='/Applications/Visual Studio Code.app/Contents/Resources/app/bin' # add vscode CLI 'code'
+# shellcheck disable=SC2066
 for directory in "$VSCODE_CLI"; do
     [[ ":$PATH:" == *:"$directory":* ]] && break
     [ -d "$directory" ] || {
@@ -26,10 +27,11 @@ for directory in "$VSCODE_CLI"; do
     }
     PATH="$PATH:$directory"
 done                                                        # add to PATH
+# shellcheck disable=SC2296
 for directory in ${(s/:/)PATH}; do
-    [[ ":$newpath:" != *:"$directory":* ]] \
-        && newpath="${newpath}:${directory}" \
-        || true
+    if [[ ":$newpath:" != *:"$directory":* ]]; then
+        newpath="${newpath}:${directory}"
+    fi
 done                                                        # rm dups
 PATH=$(echo "$newpath" | sed 's/^:*//; s/:*$//; s/::/:/g')  # rm leading, trailing ':' seps
 export PATH
@@ -39,6 +41,7 @@ export PATH
 export CDPATH='.:~/:..:../..'                           # dirs for 'cd' to search
 export HISTSIZE=100000                                  # max cmds
 export HISTFILESIZE=100000                              # max lines
+export HISTTIMEFORMAT=': %Y-%m-%d_%H:%M:%S; '           # <idx> : YYYY-mm-dd_HH:MM:SS; <cmd>
 export HOSTFILE='/etc/hosts'                            # use for hostname completion
 export LESSHISTFILE="$XDG_STATE_HOME/less/history"      # ~/.lesshst
 mkdir -p "$XDG_STATE_HOME/less"
@@ -77,22 +80,115 @@ bindkey "^R" history-incremental-search-backward    # Ctrl-R = search history
 # ref: https://code.visualstudio.com/docs/terminal/basics#_ctrla-ctrlr-output-a-r-on-zsh
 bindkey -e                                          # set Emacs
 
+
 #################################################################
 # Aliases
 
-# Aliases
 alias ...='cd ../..'
 alias ..='cd ..'
 # shellcheck disable=SC2139,SC2086
-alias edit=$VISUAL
+alias edit=$VISUAL                  # edit in editor
 alias grep='grep --color=always'
 alias ll='ls -lahF'
 alias mv='mv -i'
+alias now="date '+%F %T %Z(%z)'"    # More readable ISO 8601 local
 alias rm='rm -i'
 
+
+#################################################################
+# Functions
+
+# Trivial command-line calculator
+function calc {
+    # INTEGER ONLY! --> echo The answer is: $(( $* ))
+    # Floating point
+    awk "BEGIN {print \"$* = \" $* }";
+    #awk "BEGIN {printf \"$* = %f\", $* }";
+}
+
+
+# Allow use of 'cd ...' to cd up 2 levels, 'cd ....' up 3, etc. (like 4NT/4DOS)
+# Usage: cd ..., etc.
+# Adapted from: Example 16-15, bash Cookbook 2e, Albing & Vossen, 2017.
+function cd {
+  # shellcheck disable=SC1007
+  local option= length= count= cdpath= i=
+  if [ "$1" = "-P" ] || [ "$1" = "-L" ]; then
+    option="$1"
+    shift
+  fi
+  if [ -n "$1" ] && [ "${1:0:3}" = '...' ] && [ "$1" = "${1%/*}" ]; then
+    length=${#1}
+    count=2
+    for ((i=count; i<=length; i++)); do
+      cdpath="${cdpath}../"
+    done
+    # shellcheck disable=SC2086
+    vcd $option "$cdpath"
+  elif [ -n "$1" ]; then
+    # shellcheck disable=SC2086
+    vcd $option "$*"
+  else
+    # shellcheck disable=SC2086
+    vcd $option
+  fi
+}
+
+
+# mkdir newdir then cd into it
+# usage: mcd (<mode>) <dir>
+function mcd {
+    local newdir='_mcd_command_failed_'
+    if [ -d "$1" ]; then
+        newdir="$1"
+    else
+        if [ -n "$2" ]; then
+            command mkdir -p -m $1 "$2" && newdir="$2"
+        else
+            command mkdir -p "$1" && newdir="$1"
+        fi
+    fi
+    builtin cd "$newdir" || exit
+}
+
+
+# cd into dir_alias
+# usage: qcd <dir_alias>
+# Adapted from Example 4-1 (Barrett, 2022).
+# A function for cd-ing to faraway directories.
+function qcd {
+    local dir='_qcd_command_failed_'
+    case "$1" in
+        dev ) dir="$HOME/Developer" ;;
+        *   )
+            echo "qcd: unknown key '$1'"
+            return 1
+        ;;
+    esac
+    if [ -d "$dir" ]; then
+        builtin cd "$dir" || exit
+    else
+        echo "qcd: directory doesn't exist '$dir'"
+        return 1
+    fi
+}
+complete -W "dev" qcd
+
+
+# verbose cd
+function vcd {
+    builtin cd "$@" \
+        || return \
+        && echo -e "\n\033[1;30m📁 $OLDPWD \033[0m\033[1;32m→\033[0m \033[1;32m$PWD\033[0m\n";
+}
+
+
+#################################################################
 # Executed when shell exits (login or interactive)
+
 TRAPEXIT() {
     if [[ ! -o login ]]; then
+        # shellcheck source=/dev/null
         . ~/.zlogout
     fi
 }

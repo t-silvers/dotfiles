@@ -1,0 +1,73 @@
+version: '3'
+
+includes:
+  utils: { internal: true, taskfile: ./taskfiles/Utils.yml }
+
+vars:
+  DOTFILES_REPO: https://github.com/t-silvers/dotfiles.git
+
+tasks:
+  # TODO: Support this?
+  edit:
+
+  init:
+    desc: Set up local dotfiles from source repo
+    summary: |
+      Set up local dotfiles from source repo
+
+      Use a hosted repo to manage your dotfiles across multiple machines
+
+    vars:
+      REPO: '{{.DOTFILES_REPO}}'
+    cmds:
+      - task: utils:checkout
+        vars: { REPO: '{{.REPO}}' }
+      - task: utils:apply
+    requires:
+      vars: [REPO]
+
+  push:
+    desc: Commit local dev changes to source.
+    summary: |
+      Commit local dev changes to source GitHub dotfiles repo and sync.
+
+    vars:
+      MSG: '{{.MSG | default "default commit message"}}'
+      PATHSPEC: '{{.PATHSPEC | default "."}}'
+      REPO: '{{.DOTFILES_REPO}}'
+    cmds:
+      - task: utils:sync
+        vars: { MSG: '{{.MSG}}', PATHSPEC: '{{.PATHSPEC}}', REPO: '{{.REPO}}' }
+      - task: update
+    requires:
+      vars: [REPO]
+
+  update:
+    desc: Update local dotfiles from source.
+    summary: |
+      Update local dotfiles from source.
+
+      Pull the latest changes from your repo and see what would change, 
+      without actually applying the changes. Run:
+
+      ```sh
+      chezmoi git pull -- --autostash --rebase && chezmoi diff
+      ```
+      
+      This runs git pull --autostash --rebase in your source directory and 
+      chezmoi diff then shows the difference between the target state 
+      computed from your source directory and the actual state.
+
+      If you're happy with the changes, then you can run
+
+      ```sh
+      chezmoi apply
+      ```
+      
+      to apply them.
+
+      ref: https://www.chezmoi.io/user-guide/daily-operations/#pull-the-latest-changes-from-your-repo-and-apply-them
+
+    cmds:
+      - task: utils:chezmoi:git:pull
+      - task: utils:apply

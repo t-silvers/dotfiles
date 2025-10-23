@@ -6,8 +6,8 @@
 # Initialize zsh completion system
 # ref: zsh.sourceforge.io/Doc/Release/Completion-System.html
 autoload -U compinstall
-autoload -U compinit
-compinit
+autoload -U compinit && compinit
+autoload -U bashcompinit && bashcompinit
 
 # init homebrew shell env vars, etc
 if command -v /opt/homebrew/bin/brew > /dev/null; then
