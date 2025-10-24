@@ -1,0 +1,3 @@
+*.toml* linguist-detectable=true linguist-language=toml
+Taskfile.yml linguist-detectable=true
+taskfiles/*.yml linguist-detectable=true
