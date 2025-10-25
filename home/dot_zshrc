@@ -19,7 +19,7 @@ export XDG_STATE_HOME="$HOME/.local/state"              # user state data (logs,
 # VS code says this should be in ~/.zprofile
 VSCODE_CLI='/Applications/Visual Studio Code.app/Contents/Resources/app/bin' # add vscode CLI 'code'
 # shellcheck disable=SC2066
-for directory in "$VSCODE_CLI"; do
+for directory in "$HOME/.local/bin" "$VSCODE_CLI"; do
     [[ ":$PATH:" == *:"$directory":* ]] && break
     [ -d "$directory" ] || {
         echo "$directory doesn't exist"
