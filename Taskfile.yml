@@ -33,7 +33,7 @@ tasks:
 
     vars:
       MSG: '{{.MSG | default "default commit message"}}'
-      PATHSPEC: '{{.PATHSPEC | default "."}}'
+      PATHSPEC: '{{.PATHSPEC | default (joinPath .ROOT_DIR ".")}}'
       REPO: '{{.DOTFILES_REPO}}'
     cmds:
       - task: utils:sync

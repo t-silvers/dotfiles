@@ -125,13 +125,13 @@ function cd {
             cdpath="${cdpath}../"
         done
         # shellcheck disable=SC2086
-        cd $option "$cdpath"
+        builtin cd $option "$cdpath"
     elif [ -n "$1" ]; then
         # shellcheck disable=SC2086
-        cd $option "$*"
+        builtin cd $option "$*"
     else
         # shellcheck disable=SC2086
-        cd $option
+        builtin cd $option
     fi
 }
 
