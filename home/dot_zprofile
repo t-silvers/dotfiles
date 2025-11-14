@@ -27,7 +27,12 @@ if command -v brew > /dev/null && command -v oh-my-posh > /dev/null; then
     [ -f "$config" ] && eval "$(oh-my-posh init zsh --config "$config")"
 fi
 
-# go-task/task shell completions
+# fzf completions
+if command -v fzf > /dev/null; then
+    eval "$(fzf --zsh)"
+fi
+
+# go-task/task completions
 if command -v task > /dev/null; then
     eval "$(task --completion zsh)"
 fi
