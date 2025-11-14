@@ -1,0 +1,49 @@
+[tools]
+"aqua:asciinema/agg" = "latest"
+"aqua:asciinema/asciinema" = "latest"
+chezmoi = 'latest'
+colima = 'latest'
+docker-cli = 'latest'
+duckdb = 'latest'
+fzf = 'latest'
+github-cli = 'latest'
+go = ['1.21']
+gomplate = 'latest'
+hyperfine = 'latest'
+# imagemagick = 'latest' # TODO: fails with error
+jq = 'latest'
+jsonschema = 'latest'
+ollama = 'latest'
+pandoc = 'latest'
+"pipx:psf/black" = "latest"
+"pipx:wireservice/csvkit" = "latest"
+pre-commit = 'latest'
+python = ['3.13.9']
+qsv = 'latest'
+ripgrep = 'latest'
+ruff = 'latest'
+rust = ['1.83.0']
+shellcheck = 'latest'
+task = 'latest'
+tinytex = 'latest'
+tmux = 'latest'
+# tombi = 'latest' # TODO: fails with tool not found
+usage = 'latest'
+uv = 'latest'
+yamllint = 'latest'
+yq = 'latest'
+zoxide = 'latest'
+
+[settings]
+always_keep_download = false    # deleted after install by default
+always_keep_install = false     # deleted on failure by default
+experimental = true             # enable experimental features
+http_timeout = '30s'            # set the timeout for http requests as duration string, see `MISE_HTTP_TIMEOUT`
+jobs = 2                        # number of plugins or runtimes to install in parallel. The default is `4`.
+python.uv_venv_auto = true      # `mise` uses the virtual environment created by `uv`
+raw = false                     # set to true to directly pipe plugins to stdin/stdout/stderr
+verbose = false                 # set to true to see full installation output, see `MISE_VERBOSE`
+yes = false                     # set to true to automatically answer yes to all prompts
+
+[settings.pipx]
+uvx = true

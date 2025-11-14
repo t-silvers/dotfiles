@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 #################################################################
-# Commands
+# Commands, completions
 
 # Initialize zsh completion system
 # ref: zsh.sourceforge.io/Doc/Release/Completion-System.html
@@ -30,4 +30,14 @@ fi
 # go-task/task shell completions
 if command -v task > /dev/null; then
     eval "$(task --completion zsh)"
+fi
+
+# z(oxide) completions
+# must be added after compinit is called. You may have to rebuild your 
+# completions cache by running 
+#
+#     rm ~/.zcompdump*; compinit
+#
+if command -v zoxide > /dev/null; then
+    eval "$(zoxide init zsh)"
 fi
