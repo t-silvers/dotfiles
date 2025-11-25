@@ -18,6 +18,7 @@ pandoc = 'latest'
 "pipx:psf/black" = "latest"
 "pipx:wireservice/csvkit" = "latest"
 pre-commit = 'latest'
+"pipx:pyscaffold" = "latest"
 python = ['3.13.9']
 qsv = 'latest'
 ripgrep = 'latest'
