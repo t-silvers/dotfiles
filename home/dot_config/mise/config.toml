@@ -3,6 +3,7 @@
 "aqua:asciinema/asciinema" = "latest"
 chezmoi = 'latest'
 colima = 'latest'
+"pipx:devpi-server" = "latest"
 docker-cli = 'latest'
 duckdb = 'latest'
 fzf = 'latest'
@@ -29,6 +30,7 @@ task = 'latest'
 tinytex = 'latest'
 tmux = 'latest'
 # tombi = 'latest' # TODO: fails with tool not found
+"pipx:tox" = "latest"
 usage = 'latest'
 uv = 'latest'
 yamllint = 'latest'
