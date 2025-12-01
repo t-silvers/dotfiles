@@ -19,6 +19,7 @@ fi
 # ref: https://mise.jdx.dev/dev-tools/#environment-integration
 if command -v mise > /dev/null; then
     eval "$(mise activate zsh)"
+    mise self-update
 fi
 
 # oh-my-posh prompt theme
