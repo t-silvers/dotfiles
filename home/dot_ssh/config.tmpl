@@ -10,7 +10,7 @@ Host *
     AddKeysToAgent yes
     UseKeychain yes
 {{- end }}
-
+{{- template "sh_profile" . -}}
 Host github.com
 {{- if eq .chezmoi.os "linux" }}
     AddKeysToAgent yes
