@@ -29,9 +29,11 @@ taskfiles
 .zlogout
 .zprofile
 .zshrc
+.gitconfig
 {{ end }}
 {{- if eq .chezmoi.os "linux" }}
 .bash_logout
 .bashprofile
 .bashrc
+.config/git/config
 {{ end }}

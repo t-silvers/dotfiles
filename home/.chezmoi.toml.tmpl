@@ -1,5 +1,5 @@
-{{ $git_email := promptString "What is your git email?" -}}
-{{ $git_name := promptString "What is your git username?" -}}
+{{ $git_email := promptString "What is your git email" -}}
+{{ $git_name := promptString "What is your git username" -}}
 
 [data]
 	git_email = {{ $git_email | quote }}

@@ -12,10 +12,12 @@ Host *
 {{- end }}
 
 Host github.com
+{{- if eq .chezmoi.os "linux" }}
     AddKeysToAgent yes
+    UseKeychain yes
+{{- end }}
     IdentityFile ~/.ssh/github.pem
     IgnoreUnknown yes
-    UseKeychain yes
 
 {{- if eq .chezmoi.os "darwin" }}
 Host logan-1 meerkatze
