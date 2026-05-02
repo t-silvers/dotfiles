@@ -24,3 +24,14 @@
 README.md
 Taskfile.yml
 taskfiles
+
+{{- if eq .chezmoi.os "darwin" }}
+.zlogout
+.zprofile
+.zshrc
+{{ end }}
+{{- if eq .chezmoi.os "linux" }}
+.bash_logout
+.bashprofile
+.bashrc
+{{ end }}

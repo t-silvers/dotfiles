@@ -1,0 +1,61 @@
+Host *
+    ControlMaster auto
+    ControlPath ~/.ssh/control-%h-%p-%r
+    ControlPersist yes
+    LogLevel ERROR
+    Port 22
+    StrictHostKeyChecking ask
+    UserKnownHostsFile ~/.ssh/known_hosts
+{{- if eq .chezmoi.os "darwin" }}
+    AddKeysToAgent yes
+    UseKeychain yes
+{{- end }}
+
+Host github.com
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/github.pem
+    IgnoreUnknown yes
+    UseKeychain yes
+
+{{- if eq .chezmoi.os "darwin" }}
+Host logan-1 meerkatze
+    User silvers
+    HostName %h.in.mpiib-berlin.mpg.de
+    IdentityFile ~/.ssh/mpiib.pem
+
+Host gate gate1 gate2 raven raven01i raven02i raven03i raven04i viper viper01i viper02i viper03i viper04i
+    User thosi
+    HostName %h.mpcdf.mpg.de
+    GSSAPIAuthentication yes
+    GSSAPIDelegateCredentials yes
+
+Host raven raven01i raven02i raven03i raven04i viper viper01i viper02i viper03i viper04i
+    ProxyJump gate1
+
+# Correctly resolve short names of gateway machines and HPC nodes
+Match originalhost gate*,raven*,viper*
+    CanonicalDomains mpcdf.mpg.de
+    CanonicalizeFallbackLocal no
+    CanonicalizeHostname yes
+
+# Keep a tunnel open for the day when accessing the gate machines
+Match canonical host gate*
+    User thosi
+    Compression yes
+    ServerAliveInterval 120
+
+# Keep a tunnel open for the day when accessing the HPC nodes
+Match canonical host raven*,viper*
+    User thosi
+    Compression yes
+    ProxyJump gate1
+
+Host geniux bohemianrhapsody likearollingstone godsavethequeen sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
+    User silvers
+    HostName %h.molgen.mpg.de
+    IdentitiesOnly yes
+    IdentityFile ~/.ssh/id_rsa
+
+Host bohemianrhapsody likearollingstone godsavethequeen sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
+    ProxyJump geniux
+{{- end }}

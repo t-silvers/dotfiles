@@ -1,4 +1,5 @@
 [tools]
+actionlint = 'latest'
 "aqua:asciinema/agg" = "latest"
 "aqua:asciinema/asciinema" = "latest"
 chezmoi = 'latest'
@@ -11,13 +12,15 @@ github-cli = 'latest'
 go = ['1.21']
 gomplate = 'latest'
 hyperfine = 'latest'
-# imagemagick = 'latest' # TODO: fails with error
+"conda:imagemagick" = 'latest'              # asdf:imagemagick fails with error
 jq = 'latest'
 jsonschema = 'latest'
+"cargo:navi" = 'latest'                     # aqua:denisidoro/navi only compatible w linux and windows
 ollama = 'latest'
 pandoc = 'latest'
 "pipx:psf/black" = "latest"
-"pipx:wireservice/csvkit" = "latest"
+# "pipx:wireservice/csvkit" = "latest"
+"pipx:t-silvers/csvkit" = "latest"          # fork with versioned releases
 pre-commit = 'latest'
 "pipx:pyscaffold" = "latest"
 python = ['3.13.9']
@@ -26,10 +29,10 @@ ripgrep = 'latest'
 ruff = 'latest'
 rust = ['1.83.0']
 shellcheck = 'latest'
-task = 'latest'
+"aqua:go-task/task" = 'latest'              # ref: https://taskfile.dev/docs/installation#mise
 tinytex = 'latest'
 tmux = 'latest'
-# tombi = 'latest' # TODO: fails with tool not found
+tombi = 'latest'                            # TODO: fails with tool not found
 "pipx:tox" = "latest"
 usage = 'latest'
 uv = 'latest'
@@ -38,15 +41,20 @@ yq = 'latest'
 zoxide = 'latest'
 
 [settings]
-always_keep_download = false    # deleted after install by default
-always_keep_install = false     # deleted on failure by default
-experimental = true             # enable experimental features
-http_timeout = '30s'            # set the timeout for http requests as duration string, see `MISE_HTTP_TIMEOUT`
-jobs = 2                        # number of plugins or runtimes to install in parallel. The default is `4`.
-python.uv_venv_auto = true      # `mise` uses the virtual environment created by `uv`
-raw = false                     # set to true to directly pipe plugins to stdin/stdout/stderr
-verbose = false                 # set to true to see full installation output, see `MISE_VERBOSE`
-yes = false                     # set to true to automatically answer yes to all prompts
+always_keep_download = false                # deleted after install by default
+always_keep_install = false                 # deleted on failure by default
+experimental = true                         # enable experimental features
+fetch_remote_versions_timeout = '30s'       # set the timeout for http requests as duration string, see `MISE_FETCH_REMOTE_VERSIONS_TIMEOUT`
+http_timeout = '30s'                        # set the timeout for http requests as duration string, see `MISE_HTTP_TIMEOUT`
+jobs = 2                                    # number of plugins or runtimes to install in parallel. The default is `4`.
+python.uv_venv_auto = true                  # `mise` uses the virtual environment created by `uv`
+raw = false                                 # set to true to directly pipe plugins to stdin/stdout/stderr
+verbose = false                             # set to true to see full installation output, see `MISE_VERBOSE`
+yes = false                                 # set to true to automatically answer yes to all prompts
 
 [settings.pipx]
 uvx = true
+
+[tasks.install_ghostscript]
+description = 'Use Homebrew to install ghostscript.'
+run = 'brew install ghostscript'

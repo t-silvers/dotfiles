@@ -1,0 +1,49 @@
+
+#################################################################
+# Commands, completions
+
+# Initialize zsh completion system
+# ref: zsh.sourceforge.io/Doc/Release/Completion-System.html
+autoload -U compinstall
+autoload -U compinit && compinit
+autoload -U bashcompinit && bashcompinit
+
+# init homebrew shell env vars, etc
+if command -v /opt/homebrew/bin/brew > /dev/null; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+    # brew update -q
+fi
+
+# mise automatic activation: hook mise into shell prompt and automatically 
+# update your environment when you change directories
+# ref: https://mise.jdx.dev/dev-tools/#environment-integration
+if command -v mise > /dev/null; then
+    eval "$(mise activate zsh)"
+    # brew upgrade -q mise
+fi
+
+# oh-my-posh prompt theme
+if command -v brew > /dev/null && command -v oh-my-posh > /dev/null; then
+    config="$(brew --prefix oh-my-posh)/themes/marcduiker.omp.json"
+    [ -f "$config" ] && eval "$(oh-my-posh init zsh --config "$config")"
+fi
+
+# fzf completions
+if command -v fzf > /dev/null; then
+    eval "$(fzf --zsh)"
+fi
+
+# go-task/task completions
+if command -v task > /dev/null; then
+    eval "$(task --completion zsh)"
+fi
+
+# z(oxide) completions
+# must be added after compinit is called. You may have to rebuild your 
+# completions cache by running 
+#
+#     rm ~/.zcompdump*; compinit
+#
+if command -v zoxide > /dev/null; then
+    eval "$(zoxide init zsh)"
+fi

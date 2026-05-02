@@ -1,0 +1,199 @@
+# shellcheck disable=SC2164
+
+#################################################################
+# Environment variables and options
+
+# XDG base directory specs
+export XDG_CACHE_HOME="$HOME/.cache"                    # user non-essential (cached) data
+export XDG_CONFIG_DIRS=                                 # search dirs for configs
+export XDG_CONFIG_HOME="$HOME/.config"                  # user configs
+export XDG_DATA_DIRS='/usr/local/share/:/usr/share/'    # search dirs for data
+export XDG_DATA_HOME="$HOME/.local/share"               # user data
+export XDG_RUNTIME_DIR=                                 # user runtime files
+export XDG_SESSION_CLASS=                               #
+export XDG_SESSION_ID=                                  #
+export XDG_SESSION_TYPE=                                #
+export XDG_STATE_HOME="$HOME/.local/state"              # user state data (logs, hist, ...)
+
+# Update PATH
+# VS code says this should be in ~/.zprofile
+VSCODE_CLI='/Applications/Visual Studio Code.app/Contents/Resources/app/bin' # add vscode CLI 'code'
+# shellcheck disable=SC2066
+for directory in "$HOME/.local/bin" "$VSCODE_CLI"; do
+    [[ ":$PATH:" == *:"$directory":* ]] && break
+    [ -d "$directory" ] || {
+        echo "$directory doesn't exist"
+        exit 1
+    }
+    PATH="$PATH:$directory"
+done                                                        # add to PATH
+# shellcheck disable=SC2296
+for directory in ${(s/:/)PATH}; do
+    if [[ ":$newpath:" != *:"$directory":* ]]; then
+        newpath="${newpath}:${directory}"
+    fi
+done                                                        # rm dups
+PATH=$(echo "$newpath" | sed 's/^:*//; s/:*$//; s/::/:/g')  # rm leading, trailing ':' seps
+export PATH
+
+# Configure bash
+# Vars
+export CDPATH='.:~/:..:../..'                           # dirs for 'cd' to search
+export HISTSIZE=100000                                  # max cmds
+export HISTFILESIZE=100000                              # max lines
+export HISTTIMEFORMAT=': %Y-%m-%d_%H:%M:%S; '           # <idx> : YYYY-mm-dd_HH:MM:SS; <cmd>
+export HOSTFILE='/etc/hosts'                            # use for hostname completion
+export LESSHISTFILE="$XDG_STATE_HOME/less/history"      # ~/.lesshst
+mkdir -p "$XDG_STATE_HOME/less"
+export MANWIDTH=80                                      # manpage width, use < 80 if COLUMNS=80 & less -N
+# Options
+# option names are case-insensitive and underscores are ignored
+setopt AUTO_CD                  # if unrecognized cmd is dir in interactive shell, do 'cd <dir>'
+setopt CORRECT                  # fix cmd types
+setopt CORRECT_ALL              # fix arg types
+setopt DOT_GLOB                 # include '.*' in results of filename expansion
+setopt HIST_FIND_NO_DUPS        # no dups, even if dups aren't contiguous
+setopt HIST_IGNORE_DUPS         # omit dups
+setopt HIST_IGNORE_SPACE        # omit lines starting w spaces
+setopt HIST_VERIFY              # ['readline'] substitutions routed 'readline' -> shell parser
+setopt INC_APPEND_HISTORY       # add immediately (not on exit) & append, don't overwrite on exit
+setopt INTERACTIVE_COMMENTS     # allow comments in interactive shell
+setopt NO_CLOBBER               # disallow ‘>’ redirection to overwrite
+setopt RM_STAR_WAIT             # on ‘rm *’ or ‘rm path/*’, prompt, wait 10s, and ignore anything typed
+
+# Configure editor
+export VISUAL='vi'
+if [ "$VSCODE_INJECTION" = "1" ] && command -v code > /dev/null; then
+    export VISUAL='code --wait'
+fi
+export EDITOR="$VISUAL"
+
+# Configure readline
+bindkey "\C-i": menu-complete                       # Cycle through ambiguous completions instead of list
+bindkey "\e[1;3C" forward-word                      # Ctrl-right-arrow = word moving forward
+bindkey "\e[1;3D" backward-word                     # Ctrl-left-arrow = word moving backward
+bindkey "\e[A" history-beginning-search-backward    # up arrow = move up
+bindkey "\e[B" history-beginning-search-forward     # down arrow = move down
+bindkey "^[[1;9C" end-of-line                       #
+bindkey "^[[1;9D" beginning-of-line                 #
+bindkey "^R" history-incremental-search-backward    # Ctrl-R = search history
+# ref: https://code.visualstudio.com/docs/terminal/basics#_ctrla-ctrlr-output-a-r-on-zsh
+bindkey -e                                          # set Emacs
+
+
+#################################################################
+# Aliases
+
+alias ...='cd ../..'
+alias ..='cd ..'
+# shellcheck disable=SC2139,SC2086
+alias edit=$VISUAL                  # edit in editor
+alias grep='grep --color=always'
+alias ll='ls -lahF'
+alias mv='mv -i'
+alias now="date '+%F %T %Z(%z)'"    # More readable ISO 8601 local
+alias rm='rm -i'
+
+
+#################################################################
+# Functions
+
+# Trivial command-line calculator
+function calc {
+    # INTEGER ONLY! --> echo The answer is: $(( $* ))
+    # Floating point
+    awk "BEGIN {print \"$* = \" $* }";
+    #awk "BEGIN {printf \"$* = %f\", $* }";
+}
+
+
+# Allow use of 'cd ...' to cd up 2 levels, 'cd ....' up 3, etc. (like 4NT/4DOS)
+# Usage: cd ..., etc.
+# Adapted from: Example 16-15, bash Cookbook 2e, Albing & Vossen, 2017.
+function cd {
+    # shellcheck disable=SC1007
+    local option= length= count= cdpath= i=
+    if [ "$1" = "-P" ] || [ "$1" = "-L" ]; then
+        option="$1"
+        shift
+    fi
+    if [ -n "$1" ] && [ "${1:0:3}" = '...' ] && [ "$1" = "${1%/*}" ]; then
+        length=${#1}
+        count=2
+        for ((i=count; i<=length; i++)); do
+            cdpath="${cdpath}../"
+        done
+        # shellcheck disable=SC2086
+        builtin cd $option "$cdpath"
+    elif [ -n "$1" ]; then
+        # shellcheck disable=SC2086
+        builtin cd $option "$*"
+    else
+        # shellcheck disable=SC2086
+        builtin cd $option
+    fi
+}
+
+
+# mkdir newdir then cd into it
+# usage: mcd (<mode>) <dir>
+function mcd {
+    local newdir='_mcd_command_failed_'
+    if [ -d "$1" ]; then
+        newdir="$1"
+    else
+        if [ -n "$2" ]; then
+            command mkdir -p -m "$1" "$2" && newdir="$2"
+        else
+            command mkdir -p "$1" && newdir="$1"
+        fi
+    fi
+    builtin cd "$newdir" || exit
+}
+
+
+# cd into dir_alias
+# usage: qcd <dir_alias>
+# Adapted from Example 4-1 (Barrett, 2022).
+# A function for cd-ing to faraway directories.
+function qcd {
+    local dir='_qcd_command_failed_'
+    case "$1" in
+        dev ) dir="$HOME/Developer" ;;
+        *   )
+            echo "qcd: unknown key '$1'"
+            return 1
+        ;;
+    esac
+    if [ -d "$dir" ]; then
+        builtin cd "$dir" || exit
+    else
+        echo "qcd: directory doesn't exist '$dir'"
+        return 1
+    fi
+}
+complete -W "dev" qcd
+
+
+# ref: https://junegunn.github.io/fzf/examples/directory-navigation/#zoxidehttpsgithubcomajeetdsouzazoxide
+function z {
+    # shellcheck disable=SC2155
+    local dir=$(
+        zoxide query --list --score \
+            | fzf --height 40% --layout reverse \
+                  --info inline --nth 2.. \
+                  --tac --no-sort --query "$*" \
+                  --bind 'enter:become:echo {2..}'
+    ) && cd "$dir"
+}
+
+
+#################################################################
+# Executed when shell exits (login or interactive)
+
+TRAPEXIT() {
+    if [[ ! -o login ]]; then
+        # shellcheck source=/dev/null
+        . ~/.zlogout
+    fi
+}
