@@ -3,14 +3,14 @@ README.md
 Taskfile.yml
 taskfiles
 
-{{ if eq .chezmoi.os "darwin" }}
+{{ if ne .chezmoi.os "darwin" }}
 .zlogout
 .zprofile
 .zshrc
 .gitconfig
 {{ end }}
 
-{{ if eq .chezmoi.os "linux" }}
+{{ if ne .chezmoi.os "linux" }}
 .bash_logout
 .bashprofile
 .bashrc
