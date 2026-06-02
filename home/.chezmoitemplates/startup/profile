@@ -1,0 +1,39 @@
+{{- if eq .os "darwin" }}
+# Add Visual Studio Code (code)
+export PATH="$PATH:{{ .code | dir }}"
+{{- end }}
+{{- if lookPath "code" }}
+if [ "$VSCODE_INJECTION" = "1" ]; then
+    export EDITOR='code --wait'
+fi
+{{- else }}
+export EDITOR='vi'
+{{- end }}
+{{ if eq .shell "zsh" }}
+# Initialize zsh completion
+autoload -U compinstall
+autoload -U compinit && compinit
+autoload -U bashcompinit && bashcompinit
+{{- end }}
+
+if command -v {{ .brew }} &> /dev/null; then
+    eval "$({{ .brew }} shellenv)"
+    fpath+=("{{ output ( .brew ) "--prefix" | trim }}/share/zsh/site-functions")
+fi
+eval "$({{ .gh }} completion -s {{ .shell }})" || true
+eval "$({{ .mise }} activate {{ .shell }})" || true
+eval "$({{ .task }} --completion {{ .shell }})" || true
+{{- if eq .shell "zsh" }}
+source <({{ .fzf }} --{{ .shell }}) || true
+{{- else if eq .shell "bash" }}
+eval "$({{ .fzf }} --{{ .shell }})" || true
+{{- end }}
+eval "$({{ .navi }} widget {{ .shell }})" || true
+{{- if eq .os "darwin" }}
+omp_config="$({{ .brew }} --prefix oh-my-posh)/themes/marcduiker.omp.json"
+{{- else if eq .os "linux" }}
+omp_config="marcduiker.omp.json"
+{{- end }}
+eval "$({{ .ohmyposh }} init {{ .shell }} --config "$omp_config")" || true
+unset omp_config
+eval "$({{ .zoxide }} init {{ .shell }})" || true

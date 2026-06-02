@@ -1,0 +1,13 @@
+[rclone.remotes]
+
+[rclone.remotes.mpiib_nextcloud]
+    name = "mpiib_nextcloud"
+    type = "webdav"
+    args = [
+        "url=https://transfer.mpiib-berlin.mpg.de/remote.php/dav/files/63595F6C-C750-4D11-B19C-4D850BB5C0B1"
+    ]
+
+[rclone.remotes.mpimg_gdrive]
+    name = "mpimg_gdrive"
+    type = "drive"
+    args = []

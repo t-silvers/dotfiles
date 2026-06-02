@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$CHEZMOI_SOURCE_DIR/../utils.sh"
+
+if ! command -v {{ .tools.rclone }} &> /dev/null; then
+    err "rclone not found ({{ .tools.rclone }}). Aborting."
+fi
+
+{{ range ( .rclone.listremotes | uniq ) -}}
+if ! {{ $.tools.rclone }} listremotes | grep -q "{{ . }}"; then
+    info "Creating rclone remote {{ . }}"
+    {{- $config := get $.rclone.remotes ( . ) }}
+    {{ $.tools.rclone }} create {{ get $config "name" }} \
+        {{ get $config "type" }} {{ get $config "args" | join " " }}
+fi
+{{ end -}}

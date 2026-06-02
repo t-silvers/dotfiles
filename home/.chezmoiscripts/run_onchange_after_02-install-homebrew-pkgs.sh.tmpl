@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+#
+# Brewfile hash: {{ include "dot_config/homebrew/Brewfile.tmpl" | sha256sum }}
+#
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$CHEZMOI_SOURCE_DIR/../utils.sh"
+
+if ! command -v {{ .tools.brew }} &> /dev/null; then
+    err "Homebrew not found ({{ .tools.brew }}). Aborting."
+fi
+
+if {{ .tools.brew }} bundle check --global &> /dev/null; then
+    info "Everything installed and up-to-date. Doing nothing."
+    exit 0
+fi
+
+info "Installing Homebrew packages"
+{{ .tools.brew }} bundle install --global

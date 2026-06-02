@@ -1,0 +1,80 @@
+version: '3'
+
+vars:
+  GITHUB_DOTFILES_REPO: dotfiles
+  GITHUB_USERNAME:
+    sh: git config get user.name
+  
+  CHEZMOI_SOURCE_DIR:
+    sh: env SMOKE=1 chezmoi execute-template '{{ .chezmoi.sourceDir }}'
+  
+  # Clarifies how dev structure corresponds to chezmoi 
+  # terminology for "local repo" and "remote repo"
+  DEV_REPO_DIR: '{{.TASKFILE_DIR}}'
+  LOCAL_REPO_DIR:
+    '{{(.CHEZMOI_SOURCE_DIR | default "{{.HOME}}/.local/share/chezmoi/home") | dir}}'
+  REMOTE_REPO: '{{.GITHUB_DOTFILES_REPO | default "dotfiles"}}'
+
+tasks:
+  # -- Daily operations
+  
+  update: chezmoi update --init
+  
+  update-i:
+    deps: [diff]
+    prompt: Apply changes from remote?
+    desc: Interactive chezmoi update
+    cmds:
+      - chezmoi apply
+  
+  diff: chezmoi git pull -- --autostash --rebase && chezmoi diff
+
+  # -- Testing
+
+  render-file:
+    aliases: [render]
+    desc: Render dotfile template file to stdout
+    summary: |
+      Render dotfile template file to stdout
+
+      Note that rendering will use files (templates, data) in the chezmoi 
+      source directory (CHEZMOI_SOURCE_DIR), not those in the development 
+      home (DEV_REPO_DIR).
+
+    vars: { FILE: '{{.FILE | default .CLI_ARGS}}' }
+    env: { SMOKE: 1 }
+    cmds:
+      - chezmoi execute-template {{.FLAGS}} < {{.FILE}}
+    requires:
+      vars: [FILE]
+    preconditions:
+      - sh: test -f {{.FILE}}
+        msg: File {{joinPath .CHEZMOI_SOURCE_DIR .FILE}} not found.
+
+  # -- Misc
+
+  brewfile:
+    desc: Write all installed casks/formulae/images/taps into a Brewfile 
+    summary: |
+      Write all installed casks/formulae/images/taps into a Brewfile
+
+      If FILE is provided, will overwrite an existing Brewfile. If FILE is 
+      not provided, will pipe Brewfile to stdout.
+    
+    cmds:
+      - brew bundle dump --file={{.FILE | default "-"}} --force
+    preconditions:
+      - command -v brew
+
+  installer:
+    cmds:
+      - chezmoi generate install-init-shell.sh {{.GITHUB_USERNAME}}
+    requires:
+      vars: [GITHUB_USERNAME]
+
+  stanford-krb5:
+    desc: Download Stanford kerberos config file
+    vars:
+      URL: https://web.stanford.edu/dept/its/support/kerberos/dist/krb5.conf
+    cmds:
+      - curl -o {{.FILE | default "home/kerberos/stanford_krb5.conf"}} {{.URL}}

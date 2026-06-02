@@ -1,0 +1,4 @@
+Host logan-1 meerkatze
+  User {{ .username }}
+  HostName %h.in.mpiib-berlin.mpg.de
+  IdentityFile {{ .identityfile }}

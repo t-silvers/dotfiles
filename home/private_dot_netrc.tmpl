@@ -1,0 +1,3 @@
+machine transfer.mpiib-berlin.mpg.de
+login {{ .accounts.mpiib.username }}
+password {{ keyring "mpiib" .accounts.mpiib.username }}

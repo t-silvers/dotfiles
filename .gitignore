@@ -1,0 +1,7 @@
+.*
+!.chezmoi*
+!.gitattributes
+!.github
+!.gitignore
+!.gitkeep
+!.yamllint

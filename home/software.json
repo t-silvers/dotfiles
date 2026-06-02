@@ -1,0 +1,17 @@
+{
+    "macbook-air-m2": {
+        "brew": "/opt/homebrew/bin/brew",
+        "chezmoi": "chezmoi",
+        "code": "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code",
+        "curl": "curl",
+        "fzf": "~/.local/share/mise/installs/fzf/latest/fzf",
+        "gh": "/opt/homebrew/bin/gh",
+        "mise": "/opt/homebrew/bin/mise",
+        "navi": "~/.local/share/mise/installs/cargo-navi/latest/bin/navi",
+        "notion_cli": "/opt/homebrew/bin/ntn",
+        "ohmyposh": "/opt/homebrew/bin/oh-my-posh",
+        "rclone": "/opt/homebrew/bin/rclone",
+        "task": "~/.local/share/mise/installs/aqua-go-task-task/latest/task",
+        "zoxide": "~/.local/share/mise/installs/zoxide/latest/zoxide"
+    }
+}

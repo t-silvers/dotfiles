@@ -1,0 +1,63 @@
+[tools]
+"aqua:denisidoro/navi" = { version = "latest", os = ["linux"] }
+"aqua:go-task/task" = 'latest'              # ref: https://taskfile.dev/docs/installation#mise
+"cargo:navi" = { version = "latest", os = ["darwin"] } # aqua:denisidoro/navi only compatible w linux and windows
+"pipx:httpie/cli" = "latest"
+"pipx:psf/black" = "latest"
+"pipx:pyscaffold" = "latest"
+bats = '1.7'                                # Using flags on `run` requires at least BATS_VERSION=1.5.0.
+chezmoi = 'latest'
+duckdb = 'latest'
+fzf = 'latest'
+jq = 'latest'
+oh-my-posh = { version = "latest", os = ["linux"] }
+pandoc = 'latest'
+pre-commit = 'latest'
+python = ['3.13.9']
+ripgrep = 'latest'
+ruff = 'latest'
+rust = ['1.83.0']
+shellcheck = 'latest'
+tmux = 'latest'
+uv = 'latest'
+yamllint = 'latest'
+yq = 'latest'
+zoxide = 'latest'
+
+{{- if eq .hostname "macbook-air-m2" }}
+"aqua:asciinema/agg" = "latest"
+"aqua:asciinema/asciinema" = "latest"
+"conda:imagemagick" = 'latest'              # asdf:imagemagick fails with error
+"pipx:devpi-server" = "latest"
+"pipx:t-silvers/csvkit" = "latest"          # fork with versioned releases
+"pipx:tox" = "latest"
+# "pipx:wireservice/csvkit" = "latest"
+actionlint = 'latest'
+colima = 'latest'
+dasel = 'latest'
+docker-cli = 'latest'
+go = ['1.21']
+gomplate = 'latest'
+hyperfine = 'latest'
+miller = 'latest'
+ollama = 'latest'
+tart = 'latest'
+tinytex = 'latest'
+tombi = 'latest'                            # TODO: fails with tool not found
+usage = 'latest'
+{{- end }}
+
+[settings]
+always_keep_download = false
+always_keep_install = false
+experimental = true
+fetch_remote_versions_timeout = '30s'
+http_timeout = '30s'
+jobs = 2
+python.uv_venv_auto = true
+raw = false
+verbose = false
+yes = false
+
+[settings.pipx]
+uvx = true

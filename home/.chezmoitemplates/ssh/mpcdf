@@ -1,0 +1,26 @@
+Host gate gate1 gate2 raven raven01i raven02i raven03i raven04i viper viper01i viper02i viper03i viper04i
+  User {{ .username }}
+  HostName %h.mpcdf.mpg.de
+  GSSAPIAuthentication yes
+  GSSAPIDelegateCredentials yes
+
+Host raven raven01i raven02i raven03i raven04i viper viper01i viper02i viper03i viper04i
+  ProxyJump gate1
+
+# Correctly resolve short names of gateway machines and HPC nodes
+Match originalhost gate*,raven*,viper*
+  CanonicalDomains mpcdf.mpg.de
+  CanonicalizeFallbackLocal no
+  CanonicalizeHostname yes
+
+# Keep a tunnel open for the day when accessing the gate machines
+Match canonical host gate*
+  User {{ .username }}
+  Compression yes
+  ServerAliveInterval 120
+
+# Keep a tunnel open for the day when accessing the HPC nodes
+Match canonical host raven*,viper*
+  User {{ .username }}
+  Compression yes
+  ProxyJump gate1

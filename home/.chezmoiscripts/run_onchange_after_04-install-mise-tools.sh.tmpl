@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+#
+# .config/mise/config.toml hash: {{ include "dot_config/mise/config.toml.tmpl" | sha256sum }}
+#
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$CHEZMOI_SOURCE_DIR/../utils.sh"
+
+if ! command -v {{ .tools.mise }} &> /dev/null; then
+    err "mise-en-place not found ({{ .tools.mise }}). Aborting."
+fi
+
+if ! {{ .tools.mise }} token github; then
+    warn "mise could not find a GitHub token. Will try to fix.\n \
+          See {{ .urls.mise.github_tokens }}"
+    if ! command -v {{ .tools.gh }} &> /dev/null; then
+        err "GitHub CLI not found ({{ .tools.gh }}). Aborting."
+    fi
+    info "Using GitHub CLI to add a token to hosts.yml"
+    {{ .tools.gh }} auth login -p ssh -h github.com \
+        --insecure-storage --skip-ssh-key -w
+fi
+
+if [ ! -f ~/.config/mise/config.toml ]; then
+    err "mise config not found. Aborting."
+fi
+{{ .tools.mise }} trust ~/.config/mise/config.toml
+info "Marked ~/.config/mise/config.toml as trusted"
+info "Installing mise tools"
+{{ .tools.mise }} install

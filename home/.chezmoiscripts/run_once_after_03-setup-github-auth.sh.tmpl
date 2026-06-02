@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$CHEZMOI_SOURCE_DIR/../utils.sh"
+
+if [ ! -f {{ .accounts.github.identityfile }} ]; then
+    info "Generating GitHub identity file."
+    for tool in ssh-add ssh-agent ssh-keygen; do
+        if ! command -v $tool &> /dev/null; then
+            err "$tool not found. Aborting."
+        fi
+    done
+
+    ssh-keygen -t ed25519 \
+        -C {{ .accounts.github.email | quote }} \
+        -f {{ .accounts.github.identityfile }}
+    eval "$(ssh-agent -s)"
+    ssh-add {{ .accounts.github.identityfile }}
+fi
+
+if ! command -v {{ .tools.gh }} &> /dev/null; then
+    err "GitHub CLI not found ({{ .tools.gh }}). Aborting."
+fi
+
+{{ .tools.gh }} ssh-key add {{ .accounts.github.identityfile }}.pub \
+    --type signing

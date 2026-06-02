@@ -1,0 +1,73 @@
+{{- if eq .hostname "raven" "viper" }}
+export XDG_CACHE_HOME=/ptmp/$USER/.cache
+{{- else }}
+export XDG_CACHE_HOME=$HOME/.cache
+{{- end }}
+export XDG_CONFIG_HOME=$HOME/.config
+export XDG_DATA_DIRS=/usr/local/share/:/usr/share/
+export XDG_DATA_HOME=$HOME/.local/share
+export XDG_STATE_HOME=$HOME/.local/state
+
+{{- if eq .hostname "raven" "viper" }}
+export TMP=${TMP:-/tmp}
+export TMPPREFIX=${TMPPREFIX:-$TMP/bash}
+export TMPDIR="$TMPPREFIX.${RANDOM}${RANDOM}${RANDOM}"
+mkdir -p -m 0700 $TMPDIR
+trap "rm -rf $TMPDIR" ABRT EXIT HUP INT QUIT
+
+export MPCDF_DISABLE_MODULE_AVAIL_HINT=1
+module use --append "$HOME/soft/modules"
+{{- end }}
+
+export HISTSIZE=10000
+export HISTFILESIZE=100000
+export HISTTIMEFORMAT=': %Y-%m-%d_%H:%M:%S; '
+
+{{ if eq .shell "bash" }}
+shopt -s autocd
+shopt -s dotglob
+shopt -s histappend
+export HISTCONTROL=ignoreboth:erasedups
+set -o noclobber
+{{ else if eq .shell "zsh" }}
+setopt autocd
+setopt dotglob
+setopt histignoredups
+setopt incappendhistory
+setopt interactive_comments
+setopt noclobber
+{{ end }}
+
+{{ $keyBindings := dict
+    "\\C-i" "menu-complete" 
+    "^[[1;3C" "forward-word" 
+    "^[[1;3D" "backward-word" 
+    "^[[A" "history-search-backward" 
+    "^[[B" "history-search-forward" 
+    "^[[1;9C" "end-of-line" 
+    "^[[1;9D" "beginning-of-line" -}}
+
+{{- if eq .shell "bash" -}}
+{{   range $k, $m := $keyBindings }}
+bind '"{{ $k }}": {{ $m }}'
+{{   end }}
+{{- else if eq .shell "zsh" -}}
+{{   range $k, $m := $keyBindings -}}
+bindkey "{{ $k }}" {{ $m | replace "history" "history-beginning" }}
+{{   end }}
+{{- end }}
+
+{{- if eq .shell "bash" -}}
+set -o emacs # set Emacs
+{{- else if eq .shell "zsh" -}}
+bindkey -e
+{{- end }}
+
+alias ..='cd ..'
+alias ll='ls -lahF'
+alias mv='mv -i'
+alias rm='rm -i'
+
+calc() awk "BEGIN {print \"$* = \" $* }"
+
+z() cd $({{ .zoxide }} query --list --score | {{ .fzf }} --bind 'enter:become:echo {2..}')

@@ -1,3 +1,0 @@
-#!/bin/zsh
-
-[ -n "$PS1" ] && clear

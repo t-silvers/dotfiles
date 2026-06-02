@@ -1,0 +1,4 @@
+* text=auto
+home/.chezmoitemplates/** linguist-detectable=true linguist-language=gotmpl
+*.yml linguist-language=yaml linguist-detectable=true
+*.yaml linguist-language=yaml linguist-detectable=true

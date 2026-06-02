@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# shellcheck disable=SC1091
+source "$CHEZMOI_SOURCE_DIR/../utils.sh"
+
+if ! command -v ssh-keygen &> /dev/null; then
+    err "ssh-keygen not found. Aborting."
+fi
+
+setup_ssh_keys() {
+    local identityfile="$1"
+    if [ -f "$(realpath "$identityfile")" ]; then
+        info "Found identity file ($identityfile). Doing nothing."
+        return 0
+    fi
+    
+    local comment="$2" user="$3" hostsuffix="$4"
+    shift 4
+    
+    add_key() {
+        local address="$user@$1$hostsuffix"
+        info "Adding keys to remotes"
+        ssh "$address" "mkdir -m 0700 -p ~/.ssh"
+        ssh "$address" "touch ~/.ssh/authorized_keys"
+        ssh "$address" "chmod 0600 ~/.ssh/authorized_keys"
+        ssh "$address" "echo $(cat $identityfile.pub) >> ~/.ssh/authorized_keys"
+    }
+    
+    info "Generating SSH keys"
+    ssh-keygen -t rsa -b 4096 -f "$identityfile" -C "$comment"
+    for host in "$@"; do
+        add_key "$host"
+    done
+}
+
+info "Setting up auth for MPIMG"
+setup_ssh_keys \
+    {{ .accounts.mpimg.identityfile }} \
+    "MPIMG geniux bohemianrhapsody likearollingstone godsavethequeen \
+     sympathyforthedevil folsomprisonblues elcattivo holidayincambodia" \
+    {{ .accounts.mpimg.username }} \
+    ".molgen.mpg.de" \
+    geniux bohemianrhapsody likearollingstone godsavethequeen \
+        sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
+
+info "Setting up auth for MPIIB"
+setup_ssh_keys \
+    {{ .accounts.mpiib.identityfile }} \
+    "MPIIB logan-1 and meerkatze" \
+    {{ .accounts.mpiib.username }} \
+    ".in.mpiib-berlin.mpg.de" \
+    logan-1 meerkatze

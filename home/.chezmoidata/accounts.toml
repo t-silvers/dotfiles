@@ -1,0 +1,24 @@
+[accounts]
+
+[accounts.git]
+	name = "t-silvers"
+	email = "thomas.silvers@me.com"
+
+[accounts.github]
+	name = "t-silvers"
+	email = "thomas.silvers@me.com"
+	identityfile = "~/.ssh/id_ed25519_github"
+
+[accounts.mpcdf]
+	username = "thosi"
+
+[accounts.mpiib]
+	username = "silvers"
+	identityfile = "~/.ssh/id_rsa_mpiib"
+
+[accounts.mpimg]
+	username = "silvers"
+	identityfile = "~/.ssh/id_rsa_mpimg"
+
+[accounts.sherlock]
+	username = "tsilvers"

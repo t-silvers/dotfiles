@@ -1,0 +1,7 @@
+[urls]
+
+[urls.homebrew]
+    installer = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+
+[urls.mise]
+    github_tokens = "https://mise.jdx.dev/dev-tools/github-tokens.html"

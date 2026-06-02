@@ -1,0 +1,11 @@
+Host sherlock sherlock_dtn
+  User {{ .username }}
+  GSSAPIDelegateCredentials yes
+  GSSAPIAuthentication yes
+  ControlPath ~/.ssh/%l%r@%h:%p
+
+Host sherlock
+  HostName login.sherlock.stanford.edu
+
+Host sherlock_dtn
+  HostName dtn.sherlock.stanford.edu

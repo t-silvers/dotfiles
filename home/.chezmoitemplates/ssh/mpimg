@@ -1,0 +1,8 @@
+Host geniux bohemianrhapsody likearollingstone godsavethequeen sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
+  User {{ .username }}
+  HostName %h.molgen.mpg.de
+  IdentitiesOnly yes
+  IdentityFile {{ .identityfile }}
+
+Host bohemianrhapsody likearollingstone godsavethequeen sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
+  ProxyJump geniux

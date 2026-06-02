@@ -1,0 +1,27 @@
+---
+
+extends: default
+
+yaml-files:
+  - '*.yaml'
+  - '*.yml'
+  - '.yamllint'
+
+rules:
+  braces:
+    max-spaces-inside: -1
+  colons:
+    max-spaces-after: -1
+  document-start: disable
+  empty-lines:
+    max: 1
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+    check-multi-line-strings: true
+  line-length:
+    max: 80
+    level: warning
+  new-line-at-end-of-file:
+    level: warning
+  trailing-spaces: disable

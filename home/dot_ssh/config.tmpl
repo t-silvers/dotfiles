@@ -1,0 +1,22 @@
+Host *
+  ControlMaster auto
+  ControlPath ~/.ssh/control-%h-%p-%r
+  ControlPersist yes
+  LogLevel ERROR
+  Port 22
+  StrictHostKeyChecking ask
+  UserKnownHostsFile ~/.ssh/known_hosts
+  AddKeysToAgent yes
+{{- if eq .chezmoi.os "darwin" }}
+  UseKeychain yes
+{{- end }}
+
+{{ template "ssh/github" .accounts.github }}
+
+{{ if eq .hostname "macbook-air-m2" }}
+{{ template "ssh/mpcdf" .accounts.mpcdf }}
+
+{{ template "ssh/mpiib" .accounts.mpiib }}
+
+{{ template "ssh/mpimg" .accounts.mpimg }}
+{{ end }}

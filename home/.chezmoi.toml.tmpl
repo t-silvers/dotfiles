@@ -1,0 +1,81 @@
+{{/* boolean feature tags */}}
+{{- $havesudo := false -}}
+{{- $headless := true -}}
+{{- $testing := false -}}
+
+{{/* machine info */}}
+{{- $arch := output "uname" "-m" | trim -}}
+{{- $hostname := .chezmoi.hostname | lower -}}
+{{- $os := .chezmoi.os -}}
+{{- $owner := "personal" -}}
+{{- $shell := env "SHELL" | base -}}
+
+{{- if eq .chezmoi.os "darwin" -}}
+{{-   $hostname = output "scutil" "--get" "LocalHostName" | trim | lower -}}
+{{-   $headless = false -}}
+{{-   $havesudo = true -}}
+{{- end -}}
+
+{{- if hasPrefix $hostname "raven" -}}
+{{-   $hostname = "raven" -}}
+{{-   $owner = "mpcdf" -}}
+{{- else if hasPrefix $hostname "viper" -}}
+{{-   $hostname = "viper" -}}
+{{-   $owner = "mpcdf" -}}
+{{- else if eq $hostname "logan-1" "meerkatze" -}}
+{{-   $havesudo = true -}}
+{{-   $owner = "mpiib" -}}
+{{- else if eq $hostname "geniux" "bohemianrhapsody" "likearollingstone" "godsavethequeen" "sympathyforthedevil" "folsomprisonblues" "elcattivo" "holidayincambodia" -}}
+{{-   $owner = "mpimg" -}}
+{{- end -}}
+
+{{/* non-dotfiles */}}
+{{- $software_configfile := joinPath .chezmoi.sourceDir "software.json" -}}
+{{- $mpcdf_krb5 := joinPath .chezmoi.sourceDir "kerberos/mpcdf_krb5.conf" -}}
+{{- $stanford_krb5 := joinPath .chezmoi.sourceDir "kerberos/stanford_krb5.conf" -}}
+
+{{/* dynamic settings */}}
+{{- $software_config := get ( output "cat" $software_configfile | fromJson ) $hostname -}}
+
+[data]
+    arch = {{ $arch | quote }}
+    havesudo = {{ $havesudo }}
+    headless = {{ $headless }}
+    hostname = {{ $hostname | quote }}
+    owner = {{ $owner | quote }}
+    os = {{ $os | quote }}
+    shell = {{ $shell | quote }}
+    testing = {{ $testing }}
+
+[data.files.krb5]
+    mpcdf = {{ $mpcdf_krb5 | quote }}
+    stanford = {{ $stanford_krb5 | quote }}
+
+{{/* dynamic exec paths for tools */}}
+[data.tools]
+{{- if and ( $havesudo ) (eq .chezmoi.os "darwin" "linux") }}
+    brew = {{ get $software_config "brew" | quote }}
+{{- end }}
+    chezmoi = {{ get $software_config "chezmoi" | quote }}
+    code = {{ get $software_config "code" | quote }}
+    curl = {{ get $software_config "curl" | quote }}
+    fzf = {{ get $software_config "fzf" | quote }}
+    gh = {{ get $software_config "gh" | quote }}
+    mise = {{ get $software_config "mise" | quote }}
+    navi = {{ get $software_config "navi" | quote }}
+    notion_cli = {{ get $software_config "notion_cli" | quote }}
+    ohmyposh = {{ get $software_config "ohmyposh" | quote }}
+    rclone = {{ get $software_config "rclone" | quote }}
+    task = {{ get $software_config "task" | quote }}
+    zoxide = {{ get $software_config "zoxide" | quote }}
+
+[data.rclone]
+    listremotes = [
+        "mpiib_nextcloud", "mpimg_gdrive"
+    ]{{/* configure remotes using .chezmoidata/rclone.toml */}}
+
+[hooks]
+
+[hooks.read-source-state.pre]
+    script = ".local/share/chezmoi/setup-keychain.sh"
+    args = ["silvers:mpiib", "thosi:mpcdf"]

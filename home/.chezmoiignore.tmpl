@@ -1,0 +1,20 @@
+kerberos
+software.json
+
+{{- if ne .shell "zsh" }}
+.zprofile
+.zshrc
+{{- end }}
+
+{{- if ne .shell "bash" }}
+.bash*
+{{- end }}
+
+{{- if not .havesudo }}
+.config/homebrew
+.chezmoiscripts/*homebrew*
+{{- end }}
+
+{{- if ne .chezmoi.os "darwin" }}
+Developer
+{{- end }}
