@@ -94,19 +94,31 @@ EOF
     git -C "$FIXTURE/active source" add tracked.txt
     git -C "$FIXTURE/active source" commit -qm "init"
 
-    # Dirty chezmoi checkout must abort update-i before git pull or apply
+    # Dirty chezmoi checkout must abort update-i before git pull or apply (even under --force)
     printf 'drift\n' > "$FIXTURE/active source/untracked.txt"
     : > "$CALLS"
     run task_run update-i
     [ "$status" -ne 0 ]
     [ ! -s "$CALLS" ]
+    run "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes --force update-i
+    [ "$status" -ne 0 ]
+    [ ! -s "$CALLS" ]
 
-    # Clean chezmoi checkout runs ff-only pull, diff, apply
+    # Clean chezmoi checkout runs ff-only pull, diff, apply --init
     rm -f "$FIXTURE/active source/untracked.txt"
     : > "$CALLS"
     run task_run update-i
     [ "$status" -eq 0 ]
-    [ "$(cat "$CALLS")" = "$(printf 'git pull -- --ff-only\ndiff\napply')" ]
+    [ "$(cat "$CALLS")" = "$(printf 'git pull -- --ff-only\ndiff\napply --init')" ]
+
+    # Process env SMOKE=0 must not override inline SMOKE=1 on diff
+    stub chezmoi <<'EOF'
+printf 'SMOKE=%s %s\n' "${SMOKE:-unset}" "$*" >> "$CALLS"
+EOF
+    : > "$CALLS"
+    run env SMOKE=0 "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes diff
+    [ "$status" -eq 0 ]
+    grep -q '^SMOKE=1 --source ' "$CALLS"
 }
 
 @test "brewfile helper quotes FILE with spaces and excludes non-Homebrew runtimes" {
@@ -114,28 +126,43 @@ EOF
     stub brew <<'EOF'
 printf 'brew %s\n' "$*" >> "$CALLS"
 EOF
-    run task_run brewfile "FILE=$FIXTURE/my Brewfile"
+    run env BREWFILE_OUT="$FIXTURE/wrong" "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" \
+        --yes brewfile "FILE=$FIXTURE/my Brewfile"
     [ "$status" -eq 0 ]
     [ "$(cat "$CALLS")" = "brew bundle dump --no-go --no-uv --no-npm --file=$FIXTURE/my Brewfile --force" ]
 }
 
-@test "render selects development templates, handles spaces in FILE, and rejects missing files" {
+@test "render selects development templates, handles spaces in FILE and CLI_ARGS, ignores OS FLAGS, and rejects missing files" {
     mkdir -p "$FIXTURE/development/.chezmoitemplates"
     printf 'development marker' > "$FIXTURE/development/.chezmoitemplates/marker"
     printf '{{ template "marker" . }}' > "$FIXTURE/example with spaces.tmpl"
-    run task_run render "DEV_REPO_DIR=$FIXTURE/development" "FILE=$FIXTURE/example with spaces.tmpl" "FLAGS=--config '$FIXTURE/config.toml'"
+    run env FLAGS='-O2 --bogus' "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes \
+        render "DEV_REPO_DIR=$FIXTURE/development" "FILE=$FIXTURE/example with spaces.tmpl" \
+        "FLAGS=--config '$FIXTURE/config.toml'"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'development marker' ]]
+
+    # Positional CLI_ARGS after -- must handle spaces cleanly via CLI_ARGS_LIST
+    run env FLAGS='-O2 --bogus' "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes \
+        render "DEV_REPO_DIR=$FIXTURE/development" "FLAGS=--config '$FIXTURE/config.toml'" \
+        -- "$FIXTURE/example with spaces.tmpl"
     [ "$status" -eq 0 ]
     [[ "$output" == *'development marker' ]]
 
     chezmoi_stub
     : > "$CALLS"
+    run task_run render "DEV_REPO_DIR=$FIXTURE/development"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'FILE is required'* ]]
+    [ ! -s "$CALLS" ]
+
     run task_run render "DEV_REPO_DIR=$FIXTURE/development" "FILE=$FIXTURE/does-not-exist.tmpl"
     [ "$status" -ne 0 ]
     [[ "$output" == *'not found'* ]]
     [ ! -s "$CALLS" ]
 }
 
-@test "snapshot deletion rejects traversal and escaping symlinks and limits valid removal" {
+@test "snapshot deletion rejects traversal and escaping symlinks even under --force or env shadowing and limits valid removal" {
     chezmoi_stub
     mkdir -p "$FIXTURE/snapshots/2026-11-01/12-00-00" "$FIXTURE/snapshots/2026-11-02" "$FIXTURE/outside"
     printf 'keep' > "$FIXTURE/outside/sentinel"
@@ -145,11 +172,31 @@ EOF
         [ "$status" -ne 0 ]
         [ -f "$FIXTURE/outside/sentinel" ]
     done
-    run task_run delete-snapshots "DOTFILES_SNAPSHOT_DIR=$FIXTURE/snapshots" DATE=2026-11-01/12-00-00
+    # --force must NOT bypass containment guard
+    run "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes --force \
+        delete-snapshots "DOTFILES_SNAPSHOT_DIR=$FIXTURE/snapshots" "DATE=../outside"
+    [ "$status" -ne 0 ]
+    [ -f "$FIXTURE/outside/sentinel" ]
+
+    # Process env SNAPSHOT_ROOT / SNAPSHOT_DATE must NOT shadow CLI DATE / DOTFILES_SNAPSHOT_DIR
+    run env SNAPSHOT_ROOT="$FIXTURE" SNAPSHOT_DATE="outside" \
+        "$REAL_TASK" --taskfile "$DOTFILES_ROOT/Taskfile.yml" --yes \
+        delete-snapshots "DOTFILES_SNAPSHOT_DIR=$FIXTURE/snapshots" DATE=2026-11-01/12-00-00
     [ "$status" -eq 0 ]
     [ ! -e "$FIXTURE/snapshots/2026-11-01/12-00-00" ]
     [ -d "$FIXTURE/snapshots/2026-11-02" ]
     [ -f "$FIXTURE/outside/sentinel" ]
+
+    # installer requires GITHUB_USERNAME explicitly and safely quotes it
+    : > "$CALLS"
+    run task_run installer
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'GITHUB_USERNAME'* ]]
+    [ ! -s "$CALLS" ]
+
+    run task_run installer "GITHUB_USERNAME=demo-user"
+    [ "$status" -eq 0 ]
+    [ "$(cat "$CALLS")" = "generate install-init-shell.sh demo-user" ]
 }
 
 @test "rclone uses exact remote names and preserves separate literal arguments" {

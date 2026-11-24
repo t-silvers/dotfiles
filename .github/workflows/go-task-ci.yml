@@ -36,44 +36,13 @@ jobs:
             aqua:go-task/task bats chezmoi yamllint jactionlint
 
       - name: Lint YAML files
-        run: yamllint --format github -c=.github/linters/.yamllint .
+        run: yamllint -s --format github -c=.github/linters/.yamllint .
 
       - name: Lint GitHub Actions workflows
         run: jactionlint
 
       - name: Lint shell scripts and rendered templates
-        run: |
-          set -euo pipefail
-          shellcheck install.sh setup-keychain.sh utils.sh \
-          home/.chezmoiscripts/run_before_01-backup-dotfiles.sh
-          tmp_dir="$(mktemp -d)"
-          trap 'rm -rf "$tmp_dir"' EXIT
-          tmp_cfg="$tmp_dir/chezmoi.toml"
-          SMOKE=1 chezmoi --source . --refresh-externals=never \
-          execute-template --init --file -- home/.chezmoi.toml.tmpl \
-          > "$tmp_cfg"
-          for tmpl in home/.chezmoiscripts/run_*.tmpl \
-          home/dot_bash_profile.tmpl home/dot_bashrc.tmpl; do
-          echo "ShellCheck: $tmpl"
-          extra_args=()
-          case "$tmpl" in
-          *homebrew*)
-          brew_data='{"tools":{"brew":"/opt/homebrew/bin/brew"}}'
-          extra_args=(--override-data "$brew_data")
-          ;;
-          esac
-          SMOKE=1 chezmoi --source . --config "$tmp_cfg" \
-          --refresh-externals=never execute-template \
-          "${extra_args[@]}" --file -- "$tmpl" \
-          | shellcheck -s bash -
-          done
-          for tmpl in home/dot_zshenv.tmpl home/dot_zprofile.tmpl \
-          home/dot_zshrc.tmpl home/dot_zlogout.tmpl; do
-          echo "zsh -n: $tmpl"
-          SMOKE=1 chezmoi --source . --config "$tmp_cfg" \
-          --refresh-externals=never execute-template --file -- "$tmpl" \
-          | zsh -n
-          done
+        run: .github/scripts/lint-shell.sh
 
       - name: Verify templates and chezmoi dry-run across Linux and macOS
         run: |
