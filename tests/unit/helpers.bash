@@ -1,9 +1,11 @@
 setup() {
+    umask 022
     DOTFILES_ROOT=$(cd "$BATS_TEST_DIRNAME/../.." && pwd)
     REAL_CHEZMOI=$(command -v chezmoi)
     REAL_TASK=$(command -v task)
     export FIXTURE="$BATS_TEST_TMPDIR/fixture with spaces"
     mkdir -p "$FIXTURE/bin" "$FIXTURE/shims" "$FIXTURE/zdot"
+    chmod go-w "$BATS_TEST_TMPDIR" "$FIXTURE" 2>/dev/null || true
     FIXTURE=$(cd "$FIXTURE" && pwd -P)
     export CALLS="$FIXTURE/calls"
     export HISTFILE="$FIXTURE/history"

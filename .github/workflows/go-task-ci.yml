@@ -121,4 +121,6 @@ jobs:
           apply --dry-run --verbose --force --no-pager
 
       - name: Run unit tests
-        run: bats tests/unit/*.bats
+        run: |
+          umask 022
+          bats --print-output-on-failure tests/unit/*.bats
