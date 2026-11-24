@@ -4,4 +4,4 @@ bats = 'latest'                     # Using flags on `run` requires at least BAT
 chezmoi = 'latest'
 shellcheck = 'latest'
 yamllint = 'latest'
-actionlint = 'latest'
+jactionlint = 'latest'

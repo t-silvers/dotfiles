@@ -66,6 +66,13 @@ load helpers
     [ "$status" -eq 0 ]
     [[ "$output" == *"$FIXTURE/selected directory"* ]]
     [[ "$output" == *'1+2 = 3'* ]]
+
+    mkdir -p "$FIXTURE/bash-home"
+    cp "$FIXTURE/profile" "$FIXTURE/bash-home/.bash_profile"
+    cp "$FIXTURE/rc" "$FIXTURE/bash-home/.bashrc"
+    run env HOME="$FIXTURE/bash-home" bash -l -i -c 'calc 2+3'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *'2+3 = 5'* ]]
 }
 
 @test "Linux templates omit Mac paths and retain cluster cache defaults" {

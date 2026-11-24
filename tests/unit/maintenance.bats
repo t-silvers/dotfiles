@@ -119,13 +119,20 @@ EOF
     [ "$(cat "$CALLS")" = "brew bundle dump --no-go --no-uv --no-npm --file=$FIXTURE/my Brewfile --force" ]
 }
 
-@test "render selects development templates and handles spaces in FILE" {
+@test "render selects development templates, handles spaces in FILE, and rejects missing files" {
     mkdir -p "$FIXTURE/development/.chezmoitemplates"
     printf 'development marker' > "$FIXTURE/development/.chezmoitemplates/marker"
     printf '{{ template "marker" . }}' > "$FIXTURE/example with spaces.tmpl"
     run task_run render "DEV_REPO_DIR=$FIXTURE/development" "FILE=$FIXTURE/example with spaces.tmpl" "FLAGS=--config '$FIXTURE/config.toml'"
     [ "$status" -eq 0 ]
     [[ "$output" == *'development marker' ]]
+
+    chezmoi_stub
+    : > "$CALLS"
+    run task_run render "DEV_REPO_DIR=$FIXTURE/development" "FILE=$FIXTURE/does-not-exist.tmpl"
+    [ "$status" -ne 0 ]
+    [[ "$output" == *'not found'* ]]
+    [ ! -s "$CALLS" ]
 }
 
 @test "snapshot deletion rejects traversal and escaping symlinks and limits valid removal" {
@@ -376,6 +383,16 @@ EOF
     [ -n "$mac_hash" ]
     [ -n "$linux_hash" ]
     [ "$mac_hash" != "$linux_hash" ]
+
+    brew_mac_hash=$(render --override-data '{"hostname":"macbook-air-m2"}' \
+        --file "$DOTFILES_ROOT/home/.chezmoiscripts/run_onchange_after_02-install-homebrew-pkgs.sh.tmpl" \
+        | grep '^# Brewfile hash:')
+    brew_other_hash=$(render --override-data '{"hostname":"macbook-pro"}' \
+        --file "$DOTFILES_ROOT/home/.chezmoiscripts/run_onchange_after_02-install-homebrew-pkgs.sh.tmpl" \
+        | grep '^# Brewfile hash:')
+    [ -n "$brew_mac_hash" ]
+    [ -n "$brew_other_hash" ]
+    [ "$brew_mac_hash" != "$brew_other_hash" ]
 }
 
 @test "chezmoi.toml normalizes raven* and viper* cluster hostnames and falls back for unknown hosts" {
