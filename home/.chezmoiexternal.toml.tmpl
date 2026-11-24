@@ -12,6 +12,6 @@
            "MesloLGS NF Bold Italic.ttf") }}
 ["{{ $fontDir }}/{{ . }}"]
     type = "file"
-    url = "https://github.com/romkatv/powerlevel10k-media/raw/master/{{ . }}"
+    url = "{{ $.urls.fonts }}/raw/master/{{ . }}"
     refreshPeriod = "168h"
 {{- end }}

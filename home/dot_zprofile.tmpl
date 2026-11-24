@@ -1,13 +1,14 @@
-{{- template "startup/profile" 
-dict 
-"shell" "zsh" 
-"os" .chezmoi.os 
-"brew" .tools.brew 
-"code" .tools.code 
-"fzf" .tools.fzf 
-"gh" .tools.gh 
-"mise" .tools.mise 
-"navi" .tools.navi 
-"ohmyposh" .tools.ohmyposh 
-"task" .tools.task 
+{{- template "startup/profile"
+dict
+"shell" "zsh"
+"os" .chezmoi.os
+"hostname" .hostname
+"brew" (get .tools "brew" | default "")
+"code" .tools.code
+"fzf" .tools.fzf
+"gh" .tools.gh
+"mise" .tools.mise
+"navi" .tools.navi
+"ohmyposh" .tools.ohmyposh
+"task" .tools.task
 "zoxide" .tools.zoxide -}}

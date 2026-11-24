@@ -1,7 +1,8 @@
 [urls]
+fonts = "https://github.com/romkatv/powerlevel10k-media"
 
 [urls.homebrew]
-    installer = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
+installer = "https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh"
 
 [urls.mise]
-    github_tokens = "https://mise.jdx.dev/dev-tools/github-tokens.html"
+github_tokens = "https://mise.jdx.dev/dev-tools/github-tokens.html"

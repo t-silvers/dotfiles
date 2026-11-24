@@ -2,8 +2,10 @@ kerberos
 software.json
 
 {{- if ne .shell "zsh" }}
+.zshenv
 .zprofile
 .zshrc
+.zlogout
 {{- end }}
 
 {{- if ne .shell "bash" }}
@@ -13,8 +15,14 @@ software.json
 {{- if not .havesudo }}
 .config/homebrew
 .chezmoiscripts/*homebrew*
+.chezmoiscripts/*krb5*
 {{- end }}
 
 {{- if ne .chezmoi.os "darwin" }}
 Developer
+.chezmoiscripts/*notion*
+{{- end }}
+
+{{- if or (ne .chezmoi.os "darwin") (get . "testing" | default false) }}
+.netrc
 {{- end }}

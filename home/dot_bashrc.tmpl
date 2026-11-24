@@ -1,1 +1,1 @@
-{{- template "startup/rc" dict "shell" "bash" "os" .chezmoi.os "hostname" .hostname -}}
+{{- template "startup/rc" (merge (dict "shell" "bash" "os" .chezmoi.os "hostname" .hostname "brew" "") .tools) -}}

@@ -1,0 +1,55 @@
+if command -v {{ regexReplaceAllLiteral "^~/" .mise "$HOME/" | quote }} &> /dev/null; then
+    eval "$({{ regexReplaceAllLiteral "^~/" .mise "$HOME/" | quote }} activate {{ .shell }})" || true
+fi
+{{- if eq .shell "zsh" }}
+
+# Initialize zsh completion
+{{- if .brew }}
+if [ -n "${HOMEBREW_PREFIX:-}" ] && [ "{{ regexReplaceAllLiteral "^~/" .brew "$HOME/" }}" = "$HOMEBREW_PREFIX/bin/brew" ] && [ -d "$HOMEBREW_PREFIX/share/zsh/site-functions" ]; then
+    fpath+=("$HOMEBREW_PREFIX/share/zsh/site-functions")
+elif command -v {{ regexReplaceAllLiteral "^~/" .brew "$HOME/" | quote }} &> /dev/null; then
+    fpath+=("$({{ regexReplaceAllLiteral "^~/" .brew "$HOME/" | quote }} --prefix)/share/zsh/site-functions")
+fi
+{{- end }}
+if [ -d "$HOME/.zsh/completions" ]; then
+    fpath=("$HOME/.zsh/completions" $fpath)
+fi
+autoload -Uz compinit && compinit
+autoload -Uz bashcompinit && bashcompinit
+{{- end }}
+if command -v {{ regexReplaceAllLiteral "^~/" .gh "$HOME/" | quote }} &> /dev/null; then
+    eval "$({{ regexReplaceAllLiteral "^~/" .gh "$HOME/" | quote }} completion -s {{ .shell }})" || true
+fi
+if command -v {{ regexReplaceAllLiteral "^~/" .task "$HOME/" | quote }} &> /dev/null; then
+    eval "$({{ regexReplaceAllLiteral "^~/" .task "$HOME/" | quote }} --completion {{ .shell }})" || true
+fi
+if command -v {{ regexReplaceAllLiteral "^~/" .fzf "$HOME/" | quote }} &> /dev/null; then
+{{- if eq .shell "zsh" }}
+    source <({{ regexReplaceAllLiteral "^~/" .fzf "$HOME/" | quote }} --{{ .shell }}) || true
+{{- else if eq .shell "bash" }}
+    eval "$({{ regexReplaceAllLiteral "^~/" .fzf "$HOME/" | quote }} --{{ .shell }})" || true
+{{- end }}
+fi
+if command -v {{ regexReplaceAllLiteral "^~/" .navi "$HOME/" | quote }} &> /dev/null; then
+    eval "$({{ regexReplaceAllLiteral "^~/" .navi "$HOME/" | quote }} widget {{ .shell }})" || true
+fi
+if command -v {{ regexReplaceAllLiteral "^~/" .ohmyposh "$HOME/" | quote }} &> /dev/null; then
+{{- if eq .os "darwin" }}
+    if [ -n "${HOMEBREW_PREFIX:-}" ] && [ -f "$HOMEBREW_PREFIX/opt/oh-my-posh/themes/marcduiker.omp.json" ]; then
+        omp_config="$HOMEBREW_PREFIX/opt/oh-my-posh/themes/marcduiker.omp.json"
+{{- if .brew }}
+    elif command -v {{ regexReplaceAllLiteral "^~/" .brew "$HOME/" | quote }} &> /dev/null; then
+        omp_config="$({{ regexReplaceAllLiteral "^~/" .brew "$HOME/" | quote }} --prefix oh-my-posh)/themes/marcduiker.omp.json"
+{{- end }}
+    else
+        omp_config="marcduiker.omp.json"
+    fi
+{{- else if eq .os "linux" }}
+    omp_config="marcduiker.omp.json"
+{{- end }}
+    eval "$({{ regexReplaceAllLiteral "^~/" .ohmyposh "$HOME/" | quote }} init {{ .shell }} --config "$omp_config")" || true
+    unset omp_config
+fi
+if command -v {{ regexReplaceAllLiteral "^~/" .zoxide "$HOME/" | quote }} &> /dev/null; then
+    eval "$({{ regexReplaceAllLiteral "^~/" .zoxide "$HOME/" | quote }} init {{ .shell }})" || true
+fi
