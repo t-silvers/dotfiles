@@ -2,6 +2,10 @@
 
 extends: default
 
+ignore: |
+  .dev/
+  openspec/
+
 yaml-files:
   - '*.yaml'
   - '*.yml'

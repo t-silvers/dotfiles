@@ -3,31 +3,75 @@ version: '3'
 vars:
   GITHUB_DOTFILES_REPO: dotfiles
   GITHUB_USERNAME:
-    sh: git config get user.name
-  
+    sh: git config --get user.name || true
+
+  # Executing as a smoke test (SMOKE=1) bypasses hooks
   CHEZMOI_SOURCE_DIR:
-    sh: env SMOKE=1 chezmoi execute-template '{{ .chezmoi.sourceDir }}'
-  
-  # Clarifies how dev structure corresponds to chezmoi 
+    sh: env SMOKE=1 chezmoi source-path || true
+
+  # Clarifies how dev structure corresponds to chezmoi
   # terminology for "local repo" and "remote repo"
   DEV_REPO_DIR: '{{.TASKFILE_DIR}}'
+  DEFAULT_SOURCE_DIR: '{{joinPath .HOME ".local/share/chezmoi/home"}}'
   LOCAL_REPO_DIR:
-    '{{(.CHEZMOI_SOURCE_DIR | default "{{.HOME}}/.local/share/chezmoi/home") | dir}}'
+    '{{(.CHEZMOI_SOURCE_DIR | default .DEFAULT_SOURCE_DIR) | dir}}'
   REMOTE_REPO: '{{.GITHUB_DOTFILES_REPO | default "dotfiles"}}'
+
+  DOTFILES_SNAPSHOT_DIR:
+    '{{.XDG_CACHE_HOME | default (joinPath .HOME ".cache")}}/snapshots/dotfiles'
 
 tasks:
   # -- Daily operations
-  
-  update: chezmoi update --init
-  
+
+  update:
+    desc: Update machine dotfiles from remote (requires clean chezmoi checkout)
+    env: { LOCAL_REPO_DIR: '{{.LOCAL_REPO_DIR}}' }
+    preconditions:
+      - sh: >-
+          status="$(git -C "$LOCAL_REPO_DIR" status --porcelain)"
+          && test -z "$status"
+        msg: >-
+          Chezmoi checkout ({{.LOCAL_REPO_DIR}}) is missing, not a git repo,
+          or has uncommitted/untracked changes. Reconcile or reset it first.
+    cmds:
+      - chezmoi update --init
+
   update-i:
-    deps: [diff]
-    prompt: Apply changes from remote?
     desc: Interactive chezmoi update
+    env: { LOCAL_REPO_DIR: '{{.LOCAL_REPO_DIR}}' }
+    preconditions:
+      - sh: >-
+          status="$(git -C "$LOCAL_REPO_DIR" status --porcelain)"
+          && test -z "$status"
+        msg: >-
+          Chezmoi checkout ({{.LOCAL_REPO_DIR}}) is missing, not a git repo,
+          or has uncommitted/untracked changes. Reconcile or reset it first.
+    cmds:
+      - chezmoi git pull -- --ff-only
+      - chezmoi diff
+      - task: apply-update
+
+  apply-update:
+    internal: true
+    prompt: Apply changes from remote?
     cmds:
       - chezmoi apply
-  
-  diff: chezmoi git pull -- --autostash --rebase && chezmoi diff
+
+  diff:
+    desc: Preview development dotfiles changes without updating sources
+    env: { SMOKE: 1, DOTFILES_DEV_SOURCE: '{{.DEV_REPO_DIR}}' }
+    cmds:
+      - >-
+          chezmoi --source "$DOTFILES_DEV_SOURCE"
+          --refresh-externals=never diff
+
+  dry-run:
+    desc: Dry-run apply from development checkout without modifying HOME
+    env: { SMOKE: 1, DOTFILES_DEV_SOURCE: '{{.DEV_REPO_DIR}}' }
+    cmds:
+      - >-
+          chezmoi --source "$DOTFILES_DEV_SOURCE"
+          --refresh-externals=never apply --dry-run --verbose --force
 
   # -- Testing
 
@@ -37,38 +81,78 @@ tasks:
     summary: |
       Render dotfile template file to stdout
 
-      Note that rendering will use files (templates, data) in the chezmoi 
-      source directory (CHEZMOI_SOURCE_DIR), not those in the development 
-      home (DEV_REPO_DIR).
+      Rendering uses templates and data in the development checkout
+      (DEV_REPO_DIR), with FILE or CLI_ARGS selecting the template.
 
     vars: { FILE: '{{.FILE | default .CLI_ARGS}}' }
-    env: { SMOKE: 1 }
+    env:
+      SMOKE: 1
+      DOTFILES_DEV_SOURCE: '{{.DEV_REPO_DIR}}'
+      RENDER_FILE: '{{.FILE}}'
     cmds:
-      - chezmoi execute-template {{.FLAGS}} < {{.FILE}}
+      - >-
+          chezmoi --source "$DOTFILES_DEV_SOURCE" --refresh-externals=never
+          execute-template {{.FLAGS}} --file -- "$RENDER_FILE"
     requires:
       vars: [FILE]
     preconditions:
-      - sh: test -f {{.FILE}}
-        msg: File {{joinPath .CHEZMOI_SOURCE_DIR .FILE}} not found.
+      - sh: test -f "$RENDER_FILE"
+        msg: File {{.FILE}} not found.
+
+  test:
+    desc: Check dotfiles behavior using disposable files and command stubs
+    cmds:
+      - bats tests/unit/*.bats
 
   # -- Misc
 
-  brewfile:
-    desc: Write all installed casks/formulae/images/taps into a Brewfile 
-    summary: |
-      Write all installed casks/formulae/images/taps into a Brewfile
+  clean:
+    - task: delete-snapshots
 
-      If FILE is provided, will overwrite an existing Brewfile. If FILE is 
-      not provided, will pipe Brewfile to stdout.
-    
+  delete-snapshots:
+    prompt: Delete dotfiles snapshots?
+    env:
+      SNAPSHOT_ROOT: '{{.DOTFILES_SNAPSHOT_DIR}}'
+      SNAPSHOT_DATE: '{{.DATE}}'
     cmds:
-      - brew bundle dump --file={{.FILE | default "-"}} --force
+      - rm -rf -- "$SNAPSHOT_ROOT/$SNAPSHOT_DATE"
+    requires:
+      vars: [DATE]
+    preconditions:
+      - sh: >-
+          printf '%s\n' "$SNAPSHOT_DATE" |
+          grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}(/[0-9]{2}-[0-9]{2}-[0-9]{2})?$'
+        msg: DATE must be YYYY-MM-DD or YYYY-MM-DD/HH-MM-SS.
+      - sh: |
+          snapshot_root=$(realpath "$SNAPSHOT_ROOT") || exit 1
+          snapshot_dir=$(realpath "$SNAPSHOT_ROOT/$SNAPSHOT_DATE") || exit 1
+          test -d "$snapshot_dir" || exit 1
+          case "$snapshot_dir" in
+          "$snapshot_root"/*) ;;
+          *) exit 1 ;;
+          esac
+        msg: Snapshot must be an existing directory inside the snapshot root.
+
+  brewfile:
+    desc: Write installed Homebrew/MAS/VS Code packages into a Brewfile
+    summary: |
+      Write installed taps, formulae, casks, MAS apps, and VS Code extensions
+      into a Brewfile while excluding non-Homebrew runtimes (go, uv, npm).
+
+      If FILE is provided, overwrites an existing Brewfile. If FILE is not
+      provided, writes the Brewfile to stdout.
+    env:
+      BREWFILE_OUT: '{{.FILE | default "-"}}'
+    cmds:
+      - >-
+          brew bundle dump --no-go --no-uv --no-npm
+          --file="$BREWFILE_OUT" --force
     preconditions:
       - command -v brew
 
   installer:
     cmds:
-      - chezmoi generate install-init-shell.sh {{.GITHUB_USERNAME}}
+      - chezmoi generate install-init-shell.sh "{{.GITHUB_USERNAME}}"
     requires:
       vars: [GITHUB_USERNAME]
 
@@ -76,5 +160,8 @@ tasks:
     desc: Download Stanford kerberos config file
     vars:
       URL: https://web.stanford.edu/dept/its/support/kerberos/dist/krb5.conf
+    env:
+      KRB5_OUT: '{{.FILE | default "home/kerberos/stanford_krb5.conf"}}'
+      KRB5_URL: '{{.URL}}'
     cmds:
-      - curl -o {{.FILE | default "home/kerberos/stanford_krb5.conf"}} {{.URL}}
+      - curl -fsSL -o "$KRB5_OUT" "$KRB5_URL"

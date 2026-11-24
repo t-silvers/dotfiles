@@ -1,0 +1,7 @@
+[tools]
+"aqua:go-task/task" = 'latest'      # See https://taskfile.dev/docs/installation#mise
+bats = 'latest'                     # Using flags on `run` requires at least BATS_VERSION=1.5.0.
+chezmoi = 'latest'
+shellcheck = 'latest'
+yamllint = 'latest'
+actionlint = 'latest'

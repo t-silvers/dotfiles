@@ -1,18 +1,124 @@
-name: go-task ('task') CI
+name: Dotfiles CI
 
-on: [push, pull_request]
+'on': [push, pull_request]
 
 jobs:
-  lint:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Install system packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh shellcheck
+
+      - uses: jdx/mise-action@v2
         with:
-          python-version: 3.13
+          install_args: >-
+            aqua:go-task/task bats chezmoi yamllint actionlint
 
-      - name: Install yamllint
-        run: pip install --user yamllint
-
-      - name: Lint taskfiles
+      - name: Lint YAML files
         run: yamllint --format github -c=.github/linters/.yamllint .
+
+      - name: Lint GitHub Actions workflows
+        run: actionlint
+
+      - name: Lint shell scripts and rendered templates
+        run: |
+          set -euo pipefail
+          shellcheck install.sh setup-keychain.sh utils.sh \
+          home/.chezmoiscripts/run_before_01-backup-dotfiles.sh
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          tmp_cfg="$tmp_dir/chezmoi.toml"
+          SMOKE=1 chezmoi --source . --refresh-externals=never \
+          execute-template --init --file -- home/.chezmoi.toml.tmpl \
+          > "$tmp_cfg"
+          for tmpl in home/.chezmoiscripts/run_*.tmpl \
+          home/dot_bash_profile.tmpl home/dot_bashrc.tmpl; do
+          echo "ShellCheck: $tmpl"
+          extra_args=()
+          case "$tmpl" in
+          *homebrew*)
+          brew_data='{"tools":{"brew":"/opt/homebrew/bin/brew"}}'
+          extra_args=(--override-data "$brew_data")
+          ;;
+          esac
+          SMOKE=1 chezmoi --source . --config "$tmp_cfg" \
+          --refresh-externals=never execute-template \
+          "${extra_args[@]}" --file -- "$tmpl" \
+          | shellcheck -s bash -
+          done
+          for tmpl in home/dot_zshenv.tmpl home/dot_zprofile.tmpl \
+          home/dot_zshrc.tmpl home/dot_zlogout.tmpl; do
+          echo "zsh -n: $tmpl"
+          SMOKE=1 chezmoi --source . --config "$tmp_cfg" \
+          --refresh-externals=never execute-template --file -- "$tmpl" \
+          | zsh -n
+          done
+
+      - name: Verify templates and chezmoi dry-run across Linux and macOS
+        run: |
+          set -euo pipefail
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          mkdir -p "$tmp_dir/home/.config/chezmoi" "$tmp_dir/cache"
+          export HOME="$tmp_dir/home"
+          export XDG_CONFIG_HOME="$tmp_dir/home/.config"
+          export XDG_CACHE_HOME="$tmp_dir/cache"
+          cfg="$tmp_dir/home/.config/chezmoi/chezmoi.toml"
+
+          # 1. Linux init --dry-run and apply --dry-run (offline)
+          SMOKE=1 chezmoi --source . --destination "$HOME" \
+          --config "$cfg" --refresh-externals=never \
+          init --dry-run --verbose --no-pager
+          SMOKE=1 chezmoi --source . --destination "$HOME" \
+          --refresh-externals=never execute-template --init \
+          --file -- home/.chezmoi.toml.tmpl > "$cfg"
+          SMOKE=1 chezmoi --source . --destination "$HOME" \
+          --config "$cfg" --exclude=externals \
+          apply --dry-run --verbose --force --no-pager
+
+          # 2. Validate TOML, Brewfile, SSH, externals, symlink across hosts
+          for host in macbook-air-m2 raven; do
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --override-data "{\"hostname\":\"$host\"}" \
+          --file -- home/dot_config/mise/config.toml.tmpl \
+          | python3 -c "import sys, tomllib; tomllib.loads(sys.stdin.read())"
+          done
+          mac_data='{"hostname":"macbook-air-m2","havesudo":true,'
+          mac_data+='"testing":true,"shell":"zsh","chezmoi":{"os":"darwin"},'
+          mac_data+='"tools":{"brew":"/opt/homebrew/bin/brew"}}'
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --override-data "$mac_data" --file -- \
+          home/dot_config/homebrew/Brewfile.tmpl > /dev/null
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --override-data "$mac_data" --file -- \
+          home/.chezmoiexternal.toml.tmpl > /dev/null
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --override-data "$mac_data" --file -- \
+          home/symlink_Taskfile.yml.tmpl > /dev/null
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --override-data "$mac_data" --file -- \
+          home/dot_ssh/config.tmpl > /dev/null
+          ssh_cfg="$tmp_dir/ssh_config"
+          SMOKE=1 chezmoi --source . --config "$cfg" \
+          --refresh-externals=never execute-template \
+          --file -- home/dot_ssh/config.tmpl > "$ssh_cfg"
+          ssh -G -F "$ssh_cfg" github.com \
+          | grep -iq 'ignoreunknown usekeychain'
+
+          # 3. macOS dry-run (offline; testing=true skips keyring .netrc)
+          SMOKE=1 chezmoi --source . --destination "$HOME" \
+          --config "$cfg" --override-data "$mac_data" \
+          --exclude=externals \
+          apply --dry-run --verbose --force --no-pager
+
+      - name: Run unit tests
+        run: bats tests/unit/*.bats
