@@ -5,15 +5,15 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$CHEZMOI_SOURCE_DIR/../utils.sh"
 
-if ! command -v {{ .tools.rclone }} &> /dev/null; then
+if ! command -v {{ .tools.rclone | replace "'" "'\\''" | squote }} &> /dev/null; then
     err "rclone not found ({{ .tools.rclone }}). Aborting."
 fi
 
 {{ range ( .rclone.listremotes | uniq ) -}}
-if ! {{ $.tools.rclone }} listremotes | grep -q "{{ . }}"; then
-    info "Creating rclone remote {{ . }}"
+if ! {{ $.tools.rclone | replace "'" "'\\''" | squote }} listremotes | grep -Fxq {{ printf "%s:" . | replace "'" "'\\''" | squote }}; then
+    info {{ printf "Creating rclone remote %s" . | replace "'" "'\\''" | squote }}
     {{- $config := get $.rclone.remotes ( . ) }}
-    {{ $.tools.rclone }} create {{ get $config "name" }} \
-        {{ get $config "type" }} {{ get $config "args" | join " " }}
+    {{ $.tools.rclone | replace "'" "'\\''" | squote }} config create {{ get $config "name" | replace "'" "'\\''" | squote }} \
+        {{ get $config "type" | replace "'" "'\\''" | squote }}{{ range (get $config "args") }} {{ . | replace "'" "'\\''" | squote }}{{ end }}
 fi
 {{ end -}}

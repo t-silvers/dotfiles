@@ -7,9 +7,13 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$CHEZMOI_SOURCE_DIR/../utils.sh"
 
+if [ -f /etc/krb5.conf ] && cmp -s {{ .files.krb5.mpcdf | quote }} /etc/krb5.conf; then
+    info "Kerberos config (/etc/krb5.conf) is already up to date. Doing nothing."
+    exit 0
+fi
+
 if ! have_sudo; then
-    err "User ${USER} does not have sudo access. \
-         Cannot write Kerberos config (/etc/krb5.conf)"
+    err "User ${USER:-unknown} does not have sudo access. Cannot write Kerberos config (/etc/krb5.conf)"
 fi
 sudo -p "Enter password to replace Kerberos config: " \
     cp {{ .files.krb5.mpcdf | quote }} /etc/krb5.conf

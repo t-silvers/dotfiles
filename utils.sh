@@ -15,20 +15,27 @@ usage() { err "usage: ${0##*/} $*"; }
 
 have_sudo() {
     [ "${EUID:-${UID}}" = "0" ] && return 0
-    sudo -p "Check sudo access, then reset timestamp. Password: " -v
-    sudo -v -n \
-        || { warn "User ${USER} does not have sudo access"; return 1; }
-    info "User ${USER} has sudo"
-    sudo -k
+    if ! command -v sudo &> /dev/null; then
+        warn "sudo not found; user ${USER:-unknown} does not have sudo access"
+        return 1
+    fi
+    if ! sudo -p "Check sudo access. Password: " -v; then
+        warn "User ${USER:-unknown} does not have sudo access"
+        return 1
+    fi
+    info "User ${USER:-unknown} has sudo"
 }
 
 http_request_succeeded() {
-	local code
+    local code curl_status=0
     local url="$1"
     shift
     # Use --out-null instead of -o if curl >= 8.16
-	code="$(curl -s -w '%{response_code}\n' "$url" -o /dev/null)"
-    if [ ! "$code" = "200" ]; then
+    code="$(curl -s -w '%{response_code}\n' "$url" -o /dev/null)" || curl_status=$?
+    if [ "$curl_status" -ne 0 ]; then
+        err "$* (curl exit $curl_status)."
+    fi
+    if [ "$code" != "200" ]; then
         err "$* (HTTP $code)."
     fi
 }

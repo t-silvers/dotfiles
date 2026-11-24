@@ -5,24 +5,64 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$CHEZMOI_SOURCE_DIR/../utils.sh"
 
-if [ ! -f {{ .accounts.github.identityfile }} ]; then
+identityfile={{ regexReplaceAllLiteral "^~/" .accounts.github.identityfile "$HOME/" | quote }}
+started_agent=0
+cleanup_agent() {
+    if [ "$started_agent" -eq 1 ]; then
+        ssh-agent -k >/dev/null 2>&1 || true
+    fi
+}
+trap cleanup_agent EXIT
+
+if [ ! -f "$identityfile" ]; then
     info "Generating GitHub identity file."
     for tool in ssh-add ssh-agent ssh-keygen; do
-        if ! command -v $tool &> /dev/null; then
+        if ! command -v "$tool" &> /dev/null; then
             err "$tool not found. Aborting."
         fi
     done
 
+    ssh_dir="$(dirname "$identityfile")"
+    mkdir -p "$ssh_dir"
+    chmod 0700 "$ssh_dir"
     ssh-keygen -t ed25519 \
         -C {{ .accounts.github.email | quote }} \
-        -f {{ .accounts.github.identityfile }}
-    eval "$(ssh-agent -s)"
-    ssh-add {{ .accounts.github.identityfile }}
+        -f "$identityfile"
+    if [ -z "${SSH_AUTH_SOCK:-}" ]; then
+        eval "$(ssh-agent -s)" >/dev/null
+        started_agent=1
+    fi
+    ssh-add "$identityfile"
 fi
 
-if ! command -v {{ .tools.gh }} &> /dev/null; then
+if ! command -v {{ .tools.gh | quote }} &> /dev/null; then
     err "GitHub CLI not found ({{ .tools.gh }}). Aborting."
 fi
 
-{{ .tools.gh }} ssh-key add {{ .accounts.github.identityfile }}.pub \
-    --type signing
+if [ ! -f "$identityfile.pub" ]; then
+    err "GitHub public key not found ($identityfile.pub). Aborting."
+fi
+
+key_body="$(awk '{print $2}' "$identityfile.pub")"
+existing_keys="$({{ .tools.gh | quote }} ssh-key list 2>/dev/null || true)"
+if [ -n "$key_body" ] && printf '%s\n' "$existing_keys" | awk -F'\t' '$NF == "signing"' | grep -Fq -- "$key_body"; then
+    info "GitHub SSH signing key already registered. Doing nothing."
+    exit 0
+fi
+
+add_out=""
+if ! add_out="$({{ .tools.gh | quote }} ssh-key add "$identityfile.pub" --type signing 2>&1)"; then
+    case "$add_out" in
+        *"already in use"*|*"already exists"*)
+            info "GitHub SSH signing key already registered. Doing nothing."
+            exit 0
+            ;;
+        *"admin:ssh_signing_key"*|*"admin:public_key"*)
+            warn "GitHub CLI lacks admin:ssh_signing_key scope; skipping automatic signing key upload."
+            exit 0
+            ;;
+        *)
+            err "Failed to register GitHub SSH signing key: $add_out"
+            ;;
+    esac
+fi

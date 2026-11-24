@@ -5,9 +5,14 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$CHEZMOI_SOURCE_DIR/../utils.sh"
 
-if ! command -v {{ .tools.notion_cli }} &> /dev/null; then
+if ! command -v {{ .tools.notion_cli | quote }} &> /dev/null; then
     err "Notion CLI not found ({{ .tools.notion_cli }}). Aborting."
 fi
 
+if {{ .tools.notion_cli | quote }} whoami &> /dev/null; then
+    info "Notion CLI is already authenticated. Doing nothing."
+    exit 0
+fi
+
 info "Connecting the Notion CLI to your workspace"
-{{ .tools.notion_cli }} login
+{{ .tools.notion_cli | quote }} login

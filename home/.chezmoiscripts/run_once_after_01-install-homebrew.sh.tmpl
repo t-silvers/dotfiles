@@ -5,9 +5,9 @@ set -euo pipefail
 # shellcheck disable=SC1091
 source "$CHEZMOI_SOURCE_DIR/../utils.sh"
 
-if command -v {{ .tools.brew }} &> /dev/null; then
+if command -v {{ .tools.brew | quote }} &> /dev/null; then
     info "Homebrew is installed ({{ .tools.brew }}). Doing nothing."
     exit 0
 fi
 info "Installing Homebrew (brew)"
-sh -c "$(curl -fsSL {{ .urls.homebrew.installer }})"
+/bin/bash -c "$(curl -fsSL {{ .urls.homebrew.installer | quote }})"

@@ -11,24 +11,27 @@ fi
 
 setup_ssh_keys() {
     local identityfile="$1"
-    if [ -f "$(realpath "$identityfile")" ]; then
+    if [ -f "$identityfile" ]; then
         info "Found identity file ($identityfile). Doing nothing."
         return 0
     fi
-    
+
     local comment="$2" user="$3" hostsuffix="$4"
     shift 4
-    
+
     add_key() {
         local address="$user@$1$hostsuffix"
-        info "Adding keys to remotes"
-        ssh "$address" "mkdir -m 0700 -p ~/.ssh"
-        ssh "$address" "touch ~/.ssh/authorized_keys"
-        ssh "$address" "chmod 0600 ~/.ssh/authorized_keys"
-        ssh "$address" "echo $(cat $identityfile.pub) >> ~/.ssh/authorized_keys"
+        info "Adding public key to $address"
+        ssh "$address" \
+            'umask 077; mkdir -p ~/.ssh && touch ~/.ssh/authorized_keys && key=$(cat) && { grep -Fxq -- "$key" ~/.ssh/authorized_keys || printf "%s\n" "$key" >> ~/.ssh/authorized_keys; }' \
+            < "$identityfile.pub"
     }
-    
-    info "Generating SSH keys"
+
+    local ssh_dir
+    ssh_dir="$(dirname "$identityfile")"
+    mkdir -p "$ssh_dir"
+    chmod 0700 "$ssh_dir"
+    info "Generating SSH keys ($identityfile)"
     ssh-keygen -t rsa -b 4096 -f "$identityfile" -C "$comment"
     for host in "$@"; do
         add_key "$host"
@@ -37,18 +40,17 @@ setup_ssh_keys() {
 
 info "Setting up auth for MPIMG"
 setup_ssh_keys \
-    {{ .accounts.mpimg.identityfile }} \
-    "MPIMG geniux bohemianrhapsody likearollingstone godsavethequeen \
-     sympathyforthedevil folsomprisonblues elcattivo holidayincambodia" \
-    {{ .accounts.mpimg.username }} \
+    {{ regexReplaceAllLiteral "^~/" .accounts.mpimg.identityfile "$HOME/" | quote }} \
+    "MPIMG geniux bohemianrhapsody likearollingstone godsavethequeen sympathyforthedevil folsomprisonblues elcattivo holidayincambodia" \
+    {{ .accounts.mpimg.username | quote }} \
     ".molgen.mpg.de" \
     geniux bohemianrhapsody likearollingstone godsavethequeen \
         sympathyforthedevil folsomprisonblues elcattivo holidayincambodia
 
 info "Setting up auth for MPIIB"
 setup_ssh_keys \
-    {{ .accounts.mpiib.identityfile }} \
+    {{ regexReplaceAllLiteral "^~/" .accounts.mpiib.identityfile "$HOME/" | quote }} \
     "MPIIB logan-1 and meerkatze" \
-    {{ .accounts.mpiib.username }} \
+    {{ .accounts.mpiib.username | quote }} \
     ".in.mpiib-berlin.mpg.de" \
     logan-1 meerkatze

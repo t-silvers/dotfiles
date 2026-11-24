@@ -8,7 +8,7 @@
 {{- $hostname := .chezmoi.hostname | lower -}}
 {{- $os := .chezmoi.os -}}
 {{- $owner := "personal" -}}
-{{- $shell := env "SHELL" | base -}}
+{{- $shell := env "SHELL" | default "/bin/sh" | base -}}
 
 {{- if eq .chezmoi.os "darwin" -}}
 {{-   $hostname = output "scutil" "--get" "LocalHostName" | trim | lower -}}
@@ -16,10 +16,10 @@
 {{-   $havesudo = true -}}
 {{- end -}}
 
-{{- if hasPrefix $hostname "raven" -}}
+{{- if hasPrefix "raven" $hostname -}}
 {{-   $hostname = "raven" -}}
 {{-   $owner = "mpcdf" -}}
-{{- else if hasPrefix $hostname "viper" -}}
+{{- else if hasPrefix "viper" $hostname -}}
 {{-   $hostname = "viper" -}}
 {{-   $owner = "mpcdf" -}}
 {{- else if eq $hostname "logan-1" "meerkatze" -}}
@@ -30,12 +30,14 @@
 {{- end -}}
 
 {{/* non-dotfiles */}}
-{{- $software_configfile := joinPath .chezmoi.sourceDir "software.json" -}}
 {{- $mpcdf_krb5 := joinPath .chezmoi.sourceDir "kerberos/mpcdf_krb5.conf" -}}
 {{- $stanford_krb5 := joinPath .chezmoi.sourceDir "kerberos/stanford_krb5.conf" -}}
 
 {{/* dynamic settings */}}
-{{- $software_config := get ( output "cat" $software_configfile | fromJson ) $hostname -}}
+{{- $software_all := include "software.json" | fromJson -}}
+{{- $default_config := deepCopy (get $software_all "default" | default dict) -}}
+{{- $host_config := get $software_all $hostname | default dict -}}
+{{- $software_config := mergeOverwrite $default_config $host_config -}}
 
 [data]
     arch = {{ $arch | quote }}
@@ -77,5 +79,5 @@
 [hooks]
 
 [hooks.read-source-state.pre]
-    script = ".local/share/chezmoi/setup-keychain.sh"
+    script = {{ joinPath .chezmoi.workingTree "setup-keychain.sh" | quote }}
     args = ["silvers:mpiib", "thosi:mpcdf"]
